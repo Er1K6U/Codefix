@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\Gate;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -19,6 +20,28 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        Gate::define(
+            'eventos.ver',
+            fn($user) =>
+            $user->hasAnyRole(['admin', 'registrador', 'consulta'])
+        );
+
+        Gate::define(
+            'eventos.crear',
+            fn($user) =>
+            $user->hasAnyRole(['admin', 'registrador'])
+        );
+
+        Gate::define(
+            'eventos.editar',
+            fn($user) =>
+            $user->hasAnyRole(['admin', 'registrador'])
+        );
+
+        Gate::define(
+            'eventos.eliminar',
+            fn($user) =>
+            $user->hasRole('admin')
+        );
     }
 }
