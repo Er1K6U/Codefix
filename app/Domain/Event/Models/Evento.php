@@ -14,6 +14,7 @@ class Evento extends Model
         'titulo',
         'slug',
         'descripcion',
+        'imagen',
         'fecha_inicio',
         'fecha_fin',
         'activo',

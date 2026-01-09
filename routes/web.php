@@ -3,6 +3,10 @@
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Livewire\Event\Index as EventIndex;
+use App\Livewire\Event\Form as EventForm;
+
+
+
 
 
 Route::get('/', function () {
@@ -18,6 +22,10 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::get('/eventos', EventIndex::class)->name('eventos.index');
+    Route::get('/eventos/crear', EventForm::class)
+        ->name('eventos.crear');
+    Route::get('/eventos/{id}/editar', EventForm::class)
+        ->name('eventos.editar');
 });
 
 require __DIR__ . '/auth.php';
