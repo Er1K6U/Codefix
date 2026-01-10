@@ -4,6 +4,8 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Route;
+use Livewire\Livewire;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -20,6 +22,26 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        /*
+        |--------------------------------------------------------------------------
+        | Livewire fix for subfolder installs (/Coefix/public)
+        |--------------------------------------------------------------------------
+        | This forces Livewire to use internal routes instead of /livewire/update
+        | which breaks when the app is not served from the server root.
+        */
+        Livewire::setUpdateRoute(function ($handle) {
+            return Route::post('/_lw/update', $handle)->name('livewire.update');
+        });
+
+        Livewire::setScriptRoute(function ($handle) {
+            return Route::get('/_lw/livewire.js', $handle)->name('livewire.js');
+        });
+
+        /*
+        |--------------------------------------------------------------------------
+        | Gates - permisos del sistema
+        |--------------------------------------------------------------------------
+        */
         Gate::define(
             'eventos.ver',
             fn($user) =>
