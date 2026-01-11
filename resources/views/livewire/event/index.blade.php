@@ -3,6 +3,54 @@
         <div>
             <h1 class="text-2xl font-black text-[#2E2E2E]">Eventos</h1>
 
+            @if (session('warning'))
+                <div
+                    x-data="{ open: true }"
+                    x-show="open"
+                    x-cloak
+                    class="fixed inset-0 z-50 flex items-center justify-center p-4"
+                    aria-modal="true"
+                    role="dialog"
+                >
+                    <div class="absolute inset-0 bg-black/50" @click="open = false"></div>
+
+                    <div
+                        class="relative w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-gray-200 p-6"
+                        x-transition
+                    >
+                        <div class="flex items-start gap-3">
+                            <div class="mt-1 flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 border border-amber-200">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-amber-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M12 9v4m0 4h.01M10.29 3.86l-7.1 12.3A2 2 0 005 19h14a2 2 0 001.81-2.84l-7.1-12.3a2 2 0 00-3.42 0z"/>
+                                </svg>
+                            </div>
+
+                            <div class="flex-1">
+                                <h3 class="text-lg font-black text-[#2E2E2E]">Acción requerida</h3>
+                                <p class="mt-2 text-sm text-gray-700 leading-relaxed">
+                                    {{ session('warning') }}
+                                </p>
+
+                                <div class="mt-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
+                                    Selecciona un evento y haz clic en <span class="font-bold">“Activar en este puesto”</span> para poder continuar al check-in.
+                                </div>
+
+                                <div class="mt-6 flex items-center justify-end gap-2">
+                                    <button
+                                        type="button"
+                                        @click="open = false"
+                                        class="rounded-xl border px-4 py-2 text-sm font-semibold hover:bg-gray-50 transition"
+                                    >
+                                        Entendido
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
             @if (session('ok'))
                 <div class="mt-3 inline-flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-2 text-green-800">
                     <span class="h-2.5 w-2.5 rounded-full bg-green-500 animate-pulse"></span>
@@ -20,7 +68,8 @@
                         </span>
                     </div>
 
-                    @can('eventos.editar')
+                    {{-- ✅ Quitar evento del puesto: operativo (ADMIN / OPERADOR / CLIENTE) --}}
+                    @can('eventos.activar_puesto')
                         <button
                             wire:click="clearActiveForThisStation"
                             wire:loading.attr="disabled"
@@ -42,9 +91,10 @@
             </div>
         </div>
 
+        {{-- ✅ Nuevo evento solo ADMIN --}}
         @can('eventos.crear')
             <a href="{{ route('eventos.crear') }}"
-               class="rounded-xl bg-[#0F3D4C] px-4 py-2 font-semibold text-white hover:opacity-90 transition">
+                class="rounded-xl bg-[#0F3D4C] px-4 py-2 font-semibold text-white hover:opacity-90 transition">
                 + Nuevo evento
             </a>
         @endcan
@@ -52,7 +102,7 @@
 
     <div class="mb-4">
         <input type="text" wire:model.live="buscar" placeholder="Buscar evento..."
-               class="w-full max-w-md rounded-xl border-gray-300 focus:ring-2 focus:ring-[#0F3D4C]">
+            class="w-full max-w-md rounded-xl border-gray-300 focus:ring-2 focus:ring-[#0F3D4C]">
     </div>
 
     <div class="bg-white rounded-2xl shadow overflow-hidden">
@@ -74,20 +124,18 @@
                         $esHoy = $fecha?->equalTo($hoy) ?? false;
                         $esFuturo = $fecha?->greaterThan($hoy) ?? false;
 
-                        $isActiveInThisStation = isset($activeEventId) && ((int)$activeEventId === (int)$evento->id);
+                        $isActiveInThisStation = isset($activeEventId) && ((int) $activeEventId === (int) $evento->id);
                         $globalEnabled = (bool) $evento->activo;
                     @endphp
 
                     {{-- ✅ Resaltar fila si está activa en este puesto --}}
-                    <tr
-                        class="border-t {{ $isActiveInThisStation ? 'bg-[#0F3D4C]/[0.04]' : '' }}"
-                        wire:key="evento-{{ $evento->id }}"
-                    >
+                    <tr class="border-t {{ $isActiveInThisStation ? 'bg-[#0F3D4C]/[0.04]' : '' }}"
+                        wire:key="evento-{{ $evento->id }}">
                         <td class="px-4 py-3 font-medium">
                             <div class="flex items-center gap-3">
                                 <div class="w-10 h-10 rounded-xl overflow-hidden border bg-white flex-shrink-0">
                                     @if(!empty($evento->imagen))
-                                        <img src="{{ asset('storage/'.$evento->imagen) }}" class="w-full h-full object-cover" />
+                                        <img src="{{ asset('storage/' . $evento->imagen) }}" class="w-full h-full object-cover" />
                                     @else
                                         <div class="w-full h-full bg-gray-100"></div>
                                     @endif
@@ -109,13 +157,13 @@
                                 {{-- Badge Estado global --}}
                                 @if($globalEnabled)
                                     <span class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold
-                                                 border-emerald-200 bg-emerald-50 text-emerald-700 shadow-sm">
+                                                     border-emerald-200 bg-emerald-50 text-emerald-700 shadow-sm">
                                         <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
                                         Habilitado
                                     </span>
                                 @else
                                     <span class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold
-                                                 border-gray-200 bg-gray-50 text-gray-600 shadow-sm">
+                                                     border-gray-200 bg-gray-50 text-gray-600 shadow-sm">
                                         <span class="h-2 w-2 rounded-full bg-gray-400"></span>
                                         Deshabilitado
                                     </span>
@@ -124,17 +172,17 @@
                                 {{-- Badge Tiempo --}}
                                 @if($esHoy)
                                     <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold
-                                                 border-sky-200 bg-sky-50 text-sky-700 shadow-sm">
+                                                     border-sky-200 bg-sky-50 text-sky-700 shadow-sm">
                                         Hoy
                                     </span>
                                 @elseif($esFuturo)
                                     <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold
-                                                 border-amber-200 bg-amber-50 text-amber-800 shadow-sm">
+                                                     border-amber-200 bg-amber-50 text-amber-800 shadow-sm">
                                         Próximo
                                     </span>
                                 @else
                                     <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold
-                                                 border-rose-200 bg-rose-50 text-rose-700 shadow-sm">
+                                                     border-rose-200 bg-rose-50 text-rose-700 shadow-sm">
                                         Pasado
                                     </span>
                                 @endif
@@ -142,7 +190,7 @@
                                 {{-- Badge "En este puesto" --}}
                                 @if($isActiveInThisStation)
                                     <span class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold
-                                                 border-[#0F3D4C]/20 bg-[#0F3D4C]/5 text-[#0F3D4C] shadow-sm">
+                                                     border-[#0F3D4C]/20 bg-[#0F3D4C]/5 text-[#0F3D4C] shadow-sm">
                                         <span class="h-2 w-2 rounded-full bg-[#0F3D4C] animate-pulse"></span>
                                         En este puesto
                                     </span>
@@ -151,44 +199,44 @@
                         </td>
 
                         <td class="px-4 py-3 text-center">
-                            @can('eventos.editar')
-                                <div class="flex items-center justify-center gap-2 flex-wrap">
+                            <div class="flex items-center justify-center gap-2 flex-wrap">
 
-                                    <a href="{{ route('eventos.editar', $evento->id) }}"
-                                       class="rounded-lg border px-3 py-1.5 text-sm hover:bg-gray-50 transition">
-                                        Editar
-                                    </a>
-
-                                    {{-- ✅ Activar por puesto (PC) --}}
+                                {{-- ✅ Operativo (ADMIN / OPERADOR / CLIENTE): Activar en este puesto --}}
+                                @can('eventos.activar_puesto')
                                     <button
                                         wire:click.prevent="activateForThisStation({{ $evento->id }})"
                                         wire:loading.attr="disabled"
                                         wire:target="activateForThisStation({{ $evento->id }})"
-                                        @disabled(!$globalEnabled)
+                                        @disabled(!$globalEnabled || $isActiveInThisStation)
                                         class="rounded-lg px-3 py-1.5 text-sm text-white hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed
                                                {{ $isActiveInThisStation ? 'bg-[#0F3D4C]' : 'bg-[#4CAF50]' }}"
-                                        title="{{ $globalEnabled ? '' : 'Este evento está deshabilitado globalmente' }}"
-                                    >
+                                        title="{{ !$globalEnabled ? 'Este evento está deshabilitado globalmente' : ($isActiveInThisStation ? 'Ya está activo en este puesto' : '') }}">
                                         @if(!$globalEnabled)
                                             No habilitado
                                         @else
                                             {{ $isActiveInThisStation ? 'Activo en este puesto' : 'Activar en este puesto' }}
                                         @endif
                                     </button>
+                                @endcan
 
-                                    {{-- Toggle global (habilitar/deshabilitar) --}}
+                                {{-- ✅ Admin-only: Editar / Habilitar / Deshabilitar --}}
+                                @can('eventos.editar')
+                                    <a href="{{ route('eventos.editar', $evento->id) }}"
+                                        class="rounded-lg border px-3 py-1.5 text-sm hover:bg-gray-50 transition">
+                                        Editar
+                                    </a>
+
                                     <button
                                         wire:click.prevent="toggleActivo({{ $evento->id }})"
                                         wire:loading.attr="disabled"
                                         wire:target="toggleActivo({{ $evento->id }})"
                                         class="rounded-lg px-3 py-1.5 text-sm text-white hover:opacity-90 transition disabled:opacity-60"
-                                        style="background-color: {{ $globalEnabled ? '#2E2E2E' : '#7A7A7A' }};"
-                                    >
+                                        style="background-color: {{ $globalEnabled ? '#2E2E2E' : '#7A7A7A' }};">
                                         {{ $globalEnabled ? 'Deshabilitar' : 'Habilitar' }}
                                     </button>
+                                @endcan
 
-                                </div>
-                            @endcan
+                            </div>
                         </td>
                     </tr>
                 @empty
@@ -225,17 +273,13 @@
                 </p>
 
                 <div class="mt-6 flex items-center justify-end gap-2">
-                    <button
-                        wire:click="cancelChange"
-                        class="rounded-xl border px-4 py-2 text-sm font-semibold hover:bg-gray-50 transition"
-                    >
+                    <button wire:click="cancelChange"
+                        class="rounded-xl border px-4 py-2 text-sm font-semibold hover:bg-gray-50 transition">
                         Cancelar
                     </button>
 
-                    <button
-                        wire:click="confirmChangeEvent"
-                        class="rounded-xl bg-[#0F3D4C] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 transition"
-                    >
+                    <button wire:click="confirmChangeEvent"
+                        class="rounded-xl bg-[#0F3D4C] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 transition">
                         Sí, cambiar evento
                     </button>
                 </div>

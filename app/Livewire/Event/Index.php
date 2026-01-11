@@ -60,7 +60,8 @@ class Index extends Component
      */
     public function activateForThisStation(int $eventoId): void
     {
-        Gate::authorize('eventos.editar');
+        // ✅ Permiso específico para activar evento en puesto
+        Gate::authorize('eventos.activar_puesto');
 
         $evento = Evento::findOrFail($eventoId);
 
@@ -92,7 +93,8 @@ class Index extends Component
 
     public function confirmChangeEvent(): void
     {
-        Gate::authorize('eventos.editar');
+        // ✅ Permiso específico para cambiar el evento del puesto
+        Gate::authorize('eventos.activar_puesto');
 
         if (!$this->pendingEventId) {
             $this->cancelChange();
@@ -110,7 +112,8 @@ class Index extends Component
 
     public function clearActiveForThisStation(): void
     {
-        Gate::authorize('eventos.editar');
+        // ✅ Permiso específico para limpiar el evento del puesto
+        Gate::authorize('eventos.activar_puesto');
 
         $antes = $this->station?->active_event_id;
 
@@ -189,6 +192,7 @@ class Index extends Component
             'modulo' => 'eventos',
             'accion' => 'toggled',
             'subject_type' => Evento::class,
+            'subject_id' => Evento::class,
             'subject_id' => $evento->id,
             'user_id' => auth()->id(),
             'meta' => [
@@ -207,6 +211,10 @@ class Index extends Component
         Gate::authorize('eventos.ver');
 
         $eventos = Evento::query()
+            ->when(
+                !auth()->user()->can('eventos.editar'),
+                fn($q) => $q->where('activo', true)
+            )
             ->when(
                 $this->buscar !== '',
                 fn($q) => $q->where('titulo', 'like', '%' . $this->buscar . '%')

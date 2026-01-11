@@ -5,7 +5,10 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Auth\Events\Attempting;
 use Livewire\Livewire;
+use App\Models\User;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -26,8 +29,6 @@ class AppServiceProvider extends ServiceProvider
         |--------------------------------------------------------------------------
         | Livewire fix for subfolder installs (/Coefix/public)
         |--------------------------------------------------------------------------
-        | This forces Livewire to use internal routes instead of /livewire/update
-        | which breaks when the app is not served from the server root.
         */
         Livewire::setUpdateRoute(function ($handle) {
             return Route::post('/_lw/update', $handle)->name('livewire.update');
@@ -39,31 +40,80 @@ class AppServiceProvider extends ServiceProvider
 
         /*
         |--------------------------------------------------------------------------
-        | Gates - permisos del sistema
+        | Gates - permisos del sistema (DEFINITIVOS)
         |--------------------------------------------------------------------------
         */
+
+        // ===== EVENTOS =====
         Gate::define(
             'eventos.ver',
-            fn($user) =>
-            $user->hasAnyRole(['admin', 'registrador', 'consulta'])
+            fn(User $user) =>
+            $user->hasAnyRole(['ADMIN', 'OPERADOR', 'CLIENTE'])
         );
 
         Gate::define(
             'eventos.crear',
-            fn($user) =>
-            $user->hasAnyRole(['admin', 'registrador'])
+            fn(User $user) =>
+            $user->hasRole('ADMIN')
         );
 
         Gate::define(
             'eventos.editar',
-            fn($user) =>
-            $user->hasAnyRole(['admin', 'registrador'])
+            fn(User $user) =>
+            $user->hasRole('ADMIN')
         );
 
         Gate::define(
             'eventos.eliminar',
-            fn($user) =>
-            $user->hasRole('admin')
+            fn(User $user) =>
+            $user->hasRole('ADMIN')
         );
+
+        Gate::define(
+            'eventos.activar_puesto',
+            fn(User $user) =>
+            $user->hasAnyRole(['ADMIN', 'OPERADOR', 'CLIENTE'])
+        );
+
+        // ===== CHECK-IN =====
+        Gate::define(
+            'checkin.usar',
+            fn(User $user) =>
+            $user->hasAnyRole(['ADMIN', 'OPERADOR'])
+        );
+
+        // ===== USUARIOS (ADMIN) =====
+        Gate::define(
+            'usuarios.ver',
+            fn(User $user) =>
+            $user->hasRole('ADMIN')
+        );
+
+        Gate::define(
+            'usuarios.editar',
+            fn(User $user) =>
+            $user->hasRole('ADMIN')
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Bloquear login si el usuario está desactivado
+        |--------------------------------------------------------------------------
+        */
+        Event::listen(Attempting::class, function (Attempting $event) {
+            $email = $event->credentials['email'] ?? null;
+
+            if (!$email) {
+                return;
+            }
+
+            $user = User::where('email', $email)->first();
+
+            if ($user && $user->activo === false) {
+                throw new \Illuminate\Auth\AuthenticationException(
+                    'Tu usuario está desactivado. Contacta al administrador.'
+                );
+            }
+        });
     }
 }
