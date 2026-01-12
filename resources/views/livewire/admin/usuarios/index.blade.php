@@ -131,7 +131,7 @@
                             @endif
                         </td>
 
-                        {{-- Activo/Desactivado (control real) --}}
+                        {{-- Activo/Desactivado --}}
                         <td class="px-4 py-3 text-center">
                             @if($activo)
                                 <span
@@ -159,6 +159,13 @@
                                             <option value="{{ $r }}" @selected($role === $r)>{{ $r }}</option>
                                         @endforeach
                                     </select>
+
+                                    {{-- ✅ Reset pass (NUEVO) --}}
+                                    <button type="button" wire:click="requestResetPassword({{ $u->id }})"
+                                        class="rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-800 hover:bg-gray-50 transition"
+                                        title="Resetear contraseña">
+                                        Reset pass
+                                    </button>
 
                                     {{-- Activar / Desactivar --}}
                                     @if(!$isMe)
@@ -332,6 +339,57 @@
                     <button type="button" wire:click="createUser" wire:loading.attr="disabled" wire:target="createUser"
                         class="rounded-xl bg-[#0F3D4C] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 transition disabled:opacity-60">
                         Crear usuario
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- ✅ MODAL Reset Password (NUEVO) --}}
+    @if(!empty($showResetModal))
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div class="absolute inset-0 bg-black/40" wire:click="cancelResetPassword"></div>
+
+            <div class="relative w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-gray-200 p-6">
+                <h3 class="text-lg font-black text-[#2E2E2E]">Resetear contraseña</h3>
+
+                <p class="mt-2 text-sm text-gray-700 leading-relaxed">
+                    Usuario:
+                    <span class="font-black">{{ $resetUserName }}</span>
+                    <span class="text-gray-500">({{ $resetUserEmail }})</span>
+                </p>
+
+                <div class="mt-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+                    <div class="text-xs font-semibold text-gray-600">Contraseña temporal</div>
+
+                    <div class="mt-1 flex items-center gap-2">
+                        <input type="text" readonly value="{{ $resetPassword }}"
+                            class="w-full rounded-xl border-gray-300 bg-white focus:ring-2 focus:ring-[#0F3D4C]"
+                            id="tempPassInput">
+
+                        <button type="button"
+                            onclick="navigator.clipboard?.writeText(document.getElementById('tempPassInput').value)"
+                            class="rounded-xl bg-[#0F3D4C] px-3 py-2 text-xs font-semibold text-white hover:opacity-90 transition">
+                            Copiar
+                        </button>
+                    </div>
+
+                    <button type="button" wire:click="$set('resetPassword', '{{ \Illuminate\Support\Str::random(12) }}')"
+                        class="mt-2 text-xs font-semibold text-sky-700 hover:underline">
+                        Generar otra
+                    </button>
+                </div>
+
+                <div class="mt-6 flex items-center justify-end gap-2">
+                    <button type="button" wire:click="cancelResetPassword"
+                        class="rounded-xl border px-4 py-2 text-sm font-semibold hover:bg-gray-50 transition">
+                        Cerrar
+                    </button>
+
+                    <button type="button" wire:click="applyResetPassword" wire:loading.attr="disabled"
+                        wire:target="applyResetPassword"
+                        class="rounded-xl bg-[#0F3D4C] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 transition disabled:opacity-60">
+                        Sí, resetear
                     </button>
                 </div>
             </div>

@@ -6,6 +6,7 @@ use Livewire\Component;
 use Livewire\WithPagination;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use App\Models\User;
 use App\Models\AuditLog;
 
@@ -18,7 +19,7 @@ class Index extends Component
     // Roles permitidos (hard rule)
     public array $roles = ['ADMIN', 'OPERADOR', 'CLIENTE'];
 
-    // ✅ Modal confirmación cambio de rol (renombrado para NO chocar con método)
+    // ✅ Modal confirmación cambio de rol
     public bool $showRoleModal = false;
 
     public ?int $targetUserId = null;
@@ -27,7 +28,7 @@ class Index extends Component
     public ?string $roleAntes = null;
     public ?string $roleDespues = null;
 
-    // Modal crear usuario
+    // ✅ Modal crear usuario
     public bool $showCreateModal = false;
 
     public string $newName = '';
@@ -35,12 +36,18 @@ class Index extends Component
     public string $newRole = 'CLIENTE';
     public string $newPassword = '';
 
+    // ✅ Modal activar/desactivar
     public bool $showToggleModal = false;
     public ?int $toggleUserId = null;
     public ?string $toggleUserEmail = null;
     public ?bool $toggleTo = null;
 
-
+    // ✅ Modal reset contraseña
+    public bool $showResetModal = false;
+    public ?int $resetUserId = null;
+    public ?string $resetUserName = null;
+    public ?string $resetUserEmail = null;
+    public string $resetPassword = '';
 
     public function updatingBuscar(): void
     {
@@ -138,7 +145,7 @@ class Index extends Component
             'newPassword.min' => 'La contraseña temporal debe tener mínimo 8 caracteres.',
         ]);
 
-        // Regla dura: solo ADMIN puede crear ADMIN (por si algún día das usuarios.editar a otro rol)
+        // Regla dura: solo ADMIN puede crear ADMIN
         if ($this->newRole === 'ADMIN' && !auth()->user()->hasRole('ADMIN')) {
             abort(403);
         }
@@ -147,8 +154,9 @@ class Index extends Component
             $u = User::create([
                 'name' => $this->newName,
                 'email' => $this->newEmail,
-                'password' => bcrypt($this->newPassword),
+                'password' => Hash::make($this->newPassword),
                 'email_verified_at' => null,
+                'activo' => true, // por seguridad: usuario nuevo nace activo
             ]);
 
             $u->syncRoles([$this->newRole]);
@@ -171,7 +179,6 @@ class Index extends Component
         session()->flash('ok', 'Usuario creado correctamente.');
         $this->showCreateModal = false;
 
-        // refrescar
         $this->resetPage();
     }
 
@@ -331,6 +338,87 @@ class Index extends Component
         $this->resetPage();
     }
 
+    /**
+     * ✅ Reset password: abre modal y genera clave temporal
+     */
+    public function requestResetPassword(int $userId): void
+    {
+        Gate::authorize('usuarios.editar');
+
+        $u = User::findOrFail($userId);
+
+        // Puedes resetear a cualquiera (incluyéndote) si eres admin/usuarios.editar
+        // Si quieres prohibir reset a ti mismo, aquí sería el if.
+
+        $this->resetUserId = $u->id;
+        $this->resetUserName = $u->name;
+        $this->resetUserEmail = $u->email;
+        $this->resetPassword = $this->generateTempPassword();
+
+        $this->showResetModal = true;
+    }
+
+    public function cancelResetPassword(): void
+    {
+        $this->showResetModal = false;
+        $this->resetUserId = null;
+        $this->resetUserName = null;
+        $this->resetUserEmail = null;
+        $this->resetPassword = '';
+    }
+
+    public function applyResetPassword(): void
+    {
+        Gate::authorize('usuarios.editar');
+
+        if (!$this->resetUserId || $this->resetPassword === '') {
+            $this->cancelResetPassword();
+            return;
+        }
+
+        $targetId = (int) $this->resetUserId;
+        $plain = (string) $this->resetPassword;
+
+        // validación suave
+        if (mb_strlen($plain) < 8 || mb_strlen($plain) > 64) {
+            session()->flash('warning', 'La contraseña temporal debe tener entre 8 y 64 caracteres.');
+            return;
+        }
+
+        try {
+            DB::transaction(function () use ($targetId, $plain) {
+                $u = User::lockForUpdate()->findOrFail($targetId);
+
+                $u->password = Hash::make($plain);
+
+                // Por seguridad: cerrar sesiones existentes “recordadas”
+                $u->remember_token = null;
+
+                $u->save();
+
+                AuditLog::create([
+                    'modulo' => 'usuarios',
+                    'accion' => 'password_reset',
+                    'subject_type' => User::class,
+                    'subject_id' => $u->id,
+                    'user_id' => auth()->id(),
+                    'meta' => [
+                        'email' => $u->email,
+                        'by' => auth()->user()?->email,
+                    ],
+                    'ip' => request()->ip(),
+                    'user_agent' => request()->userAgent(),
+                ]);
+            });
+        } catch (\Throwable $e) {
+            session()->flash('warning', $e->getMessage());
+            return;
+        }
+
+        session()->flash('ok', 'Contraseña reseteada. Copia la contraseña temporal y compártela al usuario.');
+        // OJO: no cierro el modal automáticamente para que puedas copiar la clave
+        // Si prefieres cerrarlo, dime y lo cambiamos.
+    }
 
     public function render()
     {

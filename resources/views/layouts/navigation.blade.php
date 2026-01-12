@@ -12,15 +12,39 @@
 
                 <!-- Navigation Links -->
                 <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                    <x-nav-link :href="route('eventos.index')" :active="request()->routeIs('eventos.*')">
-                        {{ __('Eventos') }}
-                    </x-nav-link>
 
-                    {{-- (Opcional) Si quieres mostrar Check-in en el menú, descomenta esto:
+                    {{-- ADMIN: Eventos + Usuarios --}}
+                    @role('ADMIN')
+                        <x-nav-link :href="route('eventos.index')" :active="request()->routeIs('eventos.*')">
+                            {{ __('Eventos') }}
+                        </x-nav-link>
+
+                        <x-nav-link :href="route('admin.usuarios')" :active="request()->routeIs('admin.usuarios')">
+                            {{ __('Usuarios') }}
+                        </x-nav-link>
                     <x-nav-link :href="route('checkin')" :active="request()->routeIs('checkin')">
                         {{ __('Check-in') }}
                     </x-nav-link>
-                    --}}
+                    @endrole
+
+                    {{-- OPERADOR: Eventos + Check-in --}}
+                    @role('OPERADOR')
+                        <x-nav-link :href="route('eventos.index')" :active="request()->routeIs('eventos.*')">
+                            {{ __('Eventos') }}
+                        </x-nav-link>
+
+                        <x-nav-link :href="route('checkin')" :active="request()->routeIs('checkin')">
+                            {{ __('Check-in') }}
+                        </x-nav-link>
+                    @endrole
+
+                    {{-- CLIENTE: solo Check-in --}}
+                    @role('CLIENTE')
+                        <x-nav-link :href="route('checkin')" :active="request()->routeIs('checkin')">
+                            {{ __('Check-in') }}
+                        </x-nav-link>
+                    @endrole
+
                 </div>
             </div>
 
@@ -29,7 +53,14 @@
                 <x-dropdown align="right" width="48">
                     <x-slot name="trigger">
                         <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none transition ease-in-out duration-150">
-                            <div>{{ Auth::user()->name }}</div>
+                            <div class="flex items-center gap-2">
+                                <span>{{ Auth::user()->name }}</span>
+
+                                {{-- Badge del rol (pro, simple) --}}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 border border-gray-200">
+                                    {{ Auth::user()->getRoleNames()->first() ?? 'SIN ROL' }}
+                                </span>
+                            </div>
 
                             <div class="ms-1">
                                 <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
@@ -73,15 +104,36 @@
     <!-- Responsive Navigation Menu -->
     <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden">
         <div class="pt-2 pb-3 space-y-1">
-            <x-responsive-nav-link :href="route('eventos.index')" :active="request()->routeIs('eventos.*')">
-                {{ __('Eventos') }}
-            </x-responsive-nav-link>
 
-            {{-- (Opcional) Si quieres mostrar Check-in en el menú responsive, descomenta esto:
+            @role('ADMIN')
+                <x-responsive-nav-link :href="route('eventos.index')" :active="request()->routeIs('eventos.*')">
+                    {{ __('Eventos') }}
+                </x-responsive-nav-link>
+
+                <x-responsive-nav-link :href="route('admin.usuarios')" :active="request()->routeIs('admin.usuarios')">
+                    {{ __('Usuarios') }}
+                </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('checkin')" :active="request()->routeIs('checkin')">
                 {{ __('Check-in') }}
             </x-responsive-nav-link>
-            --}}
+            @endrole
+
+            @role('OPERADOR')
+                <x-responsive-nav-link :href="route('eventos.index')" :active="request()->routeIs('eventos.*')">
+                    {{ __('Eventos') }}
+                </x-responsive-nav-link>
+
+                <x-responsive-nav-link :href="route('checkin')" :active="request()->routeIs('checkin')">
+                    {{ __('Check-in') }}
+                </x-responsive-nav-link>
+            @endrole
+
+            @role('CLIENTE')
+                <x-responsive-nav-link :href="route('checkin')" :active="request()->routeIs('checkin')">
+                    {{ __('Check-in') }}
+                </x-responsive-nav-link>
+            @endrole
+
         </div>
 
         <!-- Responsive Settings Options -->
@@ -89,6 +141,12 @@
             <div class="px-4">
                 <div class="font-medium text-base text-gray-800">{{ Auth::user()->name }}</div>
                 <div class="font-medium text-sm text-gray-500">{{ Auth::user()->email }}</div>
+
+                <div class="mt-2">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 border border-gray-200">
+                        {{ Auth::user()->getRoleNames()->first() ?? 'SIN ROL' }}
+                    </span>
+                </div>
             </div>
 
             <div class="mt-3 space-y-1">
