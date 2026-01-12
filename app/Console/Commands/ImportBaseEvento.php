@@ -112,11 +112,10 @@ class ImportBaseEvento extends Command
 
         DB::transaction(function () use ($eventoId, $wipe, $data, $count) {
             if ($wipe) {
-                // OJO: borramos primero grupos/miembros del evento para evitar FK
+                // ✅ Ahora que representacion_miembros tiene evento_id, borramos directo por evento
                 DB::table('representacion_miembros')
-                    ->whereIn('grupo_id', function ($q) use ($eventoId) {
-                        $q->select('id')->from('representacion_grupos')->where('evento_id', $eventoId);
-                    })->delete();
+                    ->where('evento_id', $eventoId)
+                    ->delete();
 
                 DB::table('representacion_grupos')->where('evento_id', $eventoId)->delete();
 
@@ -148,6 +147,7 @@ class ImportBaseEvento extends Command
 
                 DB::table('representacion_miembros')->insert([
                     'grupo_id' => $grupoId,
+                    'evento_id' => $eventoId,
                     'padron_id' => $p->id,
                     'es_cabeza' => true,
                     'created_at' => now(),

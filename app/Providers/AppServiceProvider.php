@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Auth\Events\Attempting;
 use Livewire\Livewire;
 use App\Models\User;
+use App\Support\EventContext;
+use App\Domain\Event\Models\Evento;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -17,8 +19,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(EventContext::class, function () {
+            $evento = Evento::query()->where('is_active', true)->first();
+            return new EventContext($evento);
+        });
     }
+
 
     /**
      * Bootstrap any application services.

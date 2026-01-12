@@ -4,32 +4,23 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use App\Models\Station;
+use App\Support\EventContext;
 
 class EnsureEventoActivo
 {
     public function handle(Request $request, Closure $next)
     {
-        // Identificamos el "puesto" por IP (misma lógica que Event\Index)
-        $ip = $request->ip();
+        // 🎯 Evento activo GLOBAL (sin stations, sin IP)
+        $eventoId = app(EventContext::class)->eventoId();
 
-        $station = Station::firstOrCreate(
-            ['ip' => $ip],
-            ['nombre' => null, 'active_event_id' => null]
-        );
-
-        $eventoActivoId = (int) ($station->active_event_id ?? 0);
-
-        if ($eventoActivoId <= 0) {
+        if (!$eventoId) {
             return redirect()
                 ->route('eventos.index')
                 ->with('warning', 'Debes activar un evento primero.');
         }
 
-        // (Opcional pero útil) dejamos el evento activo disponible para el request
-        // para que tus pantallas (checkin) lo lean sin repetir consultas:
-        $request->attributes->set('active_event_id', $eventoActivoId);
-        $request->attributes->set('station_id', $station->id);
+        // (Opcional) dejar el evento disponible en el request
+        $request->attributes->set('active_event_id', $eventoId);
 
         return $next($request);
     }

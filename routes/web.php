@@ -44,31 +44,34 @@ Route::get('/', function () {
 |--------------------------------------------------------------------------
 | Authenticated area
 |--------------------------------------------------------------------------
-| Nota: 'usuario.activo' aquí bloquea TODO si el usuario está desactivado,
-| incluyendo admin, eventos, check-in, etc. (lo que queremos).
+| Nota:
+| - 'usuario.activo' bloquea TODO si el usuario está desactivado (bien).
+| - 'evento.contexto' NO bloquea; solo resuelve/inyecta contexto (station + evento).
+| - 'evento.activo' SOLO se aplica a rutas operativas (ej. check-in).
 */
-Route::middleware(['auth', 'verified', 'usuario.activo'])->group(function () {
+Route::middleware(['auth', 'verified', 'usuario.activo', 'evento.contexto'])->group(function () {
 
     // Perfil
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // Eventos
+    // Eventos (NO requiere evento activo)
     Route::get('/eventos', EventIndex::class)->name('eventos.index');
     Route::get('/eventos/crear', EventForm::class)->name('eventos.crear');
     Route::get('/eventos/{id}/editar', EventForm::class)->name('eventos.editar');
 
-    // Check-in (requiere evento activo)
+    // Check-in (SÍ requiere evento activo)
     Route::get('/checkin', RegistroPantalla::class)
         ->middleware(['evento.activo'])
         ->name('checkin');
 
     /*
-    |----------------------------------------------------------------------
+    |--------------------------------------------------------------------------
     | Admin · Usuarios (SOLO ADMIN)
-    |----------------------------------------------------------------------
+    |--------------------------------------------------------------------------
     | Usamos middleware de Spatie: permission:usuarios.ver
+    | Esto NO requiere evento activo (es administración global).
     */
     Route::get('/admin/usuarios', AdminUsuariosIndex::class)
         ->middleware(['permission:usuarios.ver'])

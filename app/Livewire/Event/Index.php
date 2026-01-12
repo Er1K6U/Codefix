@@ -45,7 +45,15 @@ class Index extends Component
             ['nombre' => null, 'active_event_id' => null]
         );
 
-        $this->activeEventId = $this->station->active_event_id;
+        // (Recomendado) dejamos station_id en sesión para todo el sistema
+        session(['station_id' => $this->station->id]);
+
+        // Preferimos el campo viejo (active_event_id) y si no existe, usamos el nuevo (active_evento_id)
+        $this->activeEventId = (int) (
+            $this->station->active_event_id
+            ?? $this->station->active_evento_id
+            ?? 0
+        ) ?: null;
 
         if ($this->activeEventId) {
             $this->currentEventTitle = Evento::whereKey($this->activeEventId)->value('titulo');
@@ -115,14 +123,27 @@ class Index extends Component
         // ✅ Permiso específico para limpiar el evento del puesto
         Gate::authorize('eventos.activar_puesto');
 
-        $antes = $this->station?->active_event_id;
+        if (!$this->station) {
+            session()->flash('ok', 'No hay puesto detectado.');
+            return;
+        }
 
-        if (!$this->station || !$antes) {
+        $antes = (int) (
+            $this->station->active_event_id
+            ?? $this->station->active_evento_id
+            ?? 0
+        ) ?: null;
+
+        if (!$antes) {
             session()->flash('ok', 'No hay evento activo para limpiar en este puesto.');
             return;
         }
 
+        // ✅ Limpiamos ambos campos por compatibilidad + metadata
         $this->station->active_event_id = null;
+        $this->station->active_evento_id = null;
+        $this->station->activated_at = null;
+        $this->station->activated_by = null;
         $this->station->save();
 
         $this->activeEventId = null;
@@ -148,10 +169,26 @@ class Index extends Component
 
     private function setActiveEvent(int $eventoId): void
     {
-        $antes = $this->station?->active_event_id;
+        if (!$this->station) {
+            // Por seguridad, recargamos la estación si algo raro pasó
+            $this->loadStation();
+        }
 
+        $antes = (int) (
+            $this->station->active_event_id
+            ?? $this->station->active_evento_id
+            ?? 0
+        ) ?: null;
+
+        // ✅ Guardamos ambos campos (viejo y nuevo) + metadata
         $this->station->active_event_id = $eventoId;
+        $this->station->active_evento_id = $eventoId; // nuevo campo
+        $this->station->activated_at = now();
+        $this->station->activated_by = auth()->id();
         $this->station->save();
+
+        // (Recomendado) estación en sesión para todo el sistema
+        session(['station_id' => $this->station->id]);
 
         $this->activeEventId = $eventoId;
         $this->currentEventTitle = Evento::whereKey($eventoId)->value('titulo');
@@ -192,7 +229,6 @@ class Index extends Component
             'modulo' => 'eventos',
             'accion' => 'toggled',
             'subject_type' => Evento::class,
-            'subject_id' => Evento::class,
             'subject_id' => $evento->id,
             'user_id' => auth()->id(),
             'meta' => [

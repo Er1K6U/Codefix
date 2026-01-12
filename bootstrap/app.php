@@ -17,8 +17,12 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
 
-            // los tuyos (si ya los tienes, déjalos; si no, agrégalos)
             'usuario.activo' => \App\Http\Middleware\EnsureUserIsActive::class,
+
+            // ✅ NUEVO: prepara el contexto (no bloquea)
+            'evento.contexto' => \App\Http\Middleware\SetEventContext::class,
+
+            // ✅ YA EXISTE: bloquea si no hay evento activo
             'evento.activo' => \App\Http\Middleware\EnsureEventoActivo::class,
         ]);
     })
