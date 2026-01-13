@@ -8,6 +8,7 @@ use App\Domain\Event\Models\Evento;
 use App\Models\AuditLog;
 use Livewire\WithFileUploads;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
 
 class Form extends Component
 {
@@ -24,13 +25,13 @@ class Form extends Component
     public $imagenFile = null;            // archivo temporal
     public ?string $imagenActual = null;  // imagen guardada (modo editar)
 
-    // ✅ NUEVO: Excels para importación (se guardan en storage/app/imports)
-    public $baseExcelFile = null;         // Base Evento (base_evento.xlsx)
-    public $controlesExcelFile = null;    // Controles (Controles.xlsx)
+    // ✅ Excels para importación
+    public $baseExcelFile = null;         // Base Evento
+    public $controlesExcelFile = null;    // Controles
 
-    // ✅ NUEVO: rutas guardadas (para verlas luego si quieres mostrar en UI)
-    public ?string $baseExcelPath = null;       // imports/xxxx.xlsx
-    public ?string $controlesExcelPath = null;  // imports/xxxx.xlsx
+    // ✅ Rutas guardadas (para mostrar en UI si quieres)
+    public ?string $baseExcelPath = null;       // eventos/{id}/base_evento.xlsx
+    public ?string $controlesExcelPath = null;  // eventos/{id}/controles.xlsx
 
     public function mount(?int $id = null): void
     {
@@ -47,8 +48,6 @@ class Form extends Component
             $this->activo = (bool) $evento->activo;
             $this->imagenActual = $evento->imagen;
 
-            // Si en tu tabla eventos NO existen aún estas columnas, no pasa nada.
-            // Las dejamos aquí para futuro (solo si existen).
             $this->baseExcelPath = $evento->base_excel_path ?? null;
             $this->controlesExcelPath = $evento->controles_excel_path ?? null;
         } else {
@@ -58,7 +57,6 @@ class Form extends Component
 
     public function save()
     {
-        // ✅ Validación SIN slug
         $rules = [
             'titulo' => 'required|string|max:160',
             'descripcion' => 'nullable|string',
@@ -66,15 +64,14 @@ class Form extends Component
             'activo' => 'boolean',
             'imagenFile' => 'nullable|image|max:2048',
 
-            // ✅ NUEVO: validar archivos Excel
-            // (mimes y mimetypes para cubrir Windows/Mac)
+            // ✅ validar archivos Excel
             'baseExcelFile' => 'nullable|file|max:10240|mimes:xlsx,xls|mimetypes:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel',
             'controlesExcelFile' => 'nullable|file|max:10240|mimes:xlsx,xls|mimetypes:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel',
         ];
 
         $data = $this->validate($rules);
 
-        // ✅ Generar slug AUTOMÁTICO y ÚNICO (pero ya no lo mostramos en el formulario)
+        // ✅ Generar slug AUTOMÁTICO y ÚNICO
         $slugBase = Str::slug($this->titulo);
         $slug = $slugBase;
 
@@ -95,31 +92,11 @@ class Form extends Component
             $data['imagen'] = $path;
         }
 
-        // ✅ NUEVO: Guardar Excels en storage/app/imports
-        // OJO: esto NO importa aún, solo guarda archivos.
-        if ($this->baseExcelFile) {
-            $stored = $this->baseExcelFile->storeAs(
-                'imports',
-                'base_evento_' . now()->format('Ymd_His') . '.xlsx'
-            );
-            $this->baseExcelPath = $stored; // e.g. imports/base_evento_20260112_235959.xlsx
+        // ⚠️ Importante:
+        // Ya NO guardamos excels en /imports con timestamp.
+        // Los guardamos por evento en: storage/app/eventos/{evento_id}/base_evento.xlsx y controles.xlsx
+        // y guardamos la ruta en DB (base_excel_path, controles_excel_path)
 
-            // Si la columna existe más adelante, la guardaremos también en $data
-            $data['base_excel_path'] = $stored;
-        }
-
-        if ($this->controlesExcelFile) {
-            $stored = $this->controlesExcelFile->storeAs(
-                'imports',
-                'controles_' . now()->format('Ymd_His') . '.xlsx'
-            );
-            $this->controlesExcelPath = $stored; // e.g. imports/controles_20260112_235959.xlsx
-
-            // Si la columna existe más adelante, la guardaremos también en $data
-            $data['controles_excel_path'] = $stored;
-        }
-
-        // ✅ Guardar en DB + auditoría
         if ($this->idEvento) {
             Gate::authorize('eventos.editar');
 
@@ -136,9 +113,40 @@ class Form extends Component
                 'controles_excel_path' => $evento->controles_excel_path ?? null,
             ];
 
+            // Guardar datos base primero
             $evento->fill($data);
             $evento->updated_by = auth()->id();
             $evento->save();
+
+            // Carpeta por evento
+            $dir = "eventos/{$evento->id}";
+
+            // ✅ BASE Excel (si llega nuevo, borramos el anterior)
+            if ($this->baseExcelFile) {
+                if ($evento->base_excel_path) {
+                    Storage::delete($evento->base_excel_path);
+                }
+
+                $stored = $this->baseExcelFile->storeAs($dir, 'base_evento.xlsx');
+                $evento->base_excel_path = $stored;
+                $this->baseExcelPath = $stored;
+            }
+
+            // ✅ Controles Excel
+            if ($this->controlesExcelFile) {
+                if ($evento->controles_excel_path) {
+                    Storage::delete($evento->controles_excel_path);
+                }
+
+                $stored = $this->controlesExcelFile->storeAs($dir, 'controles.xlsx');
+                $evento->controles_excel_path = $stored;
+                $this->controlesExcelPath = $stored;
+            }
+
+            // Guardar cambios de rutas si hubo archivos
+            if ($this->baseExcelFile || $this->controlesExcelFile) {
+                $evento->save();
+            }
 
             $despues = [
                 'titulo' => $evento->titulo,
@@ -169,9 +177,31 @@ class Form extends Component
         } else {
             Gate::authorize('eventos.crear');
 
+            // Crear evento primero para obtener ID
             $evento = Evento::create($data + [
                 'created_by' => auth()->id(),
             ]);
+
+            $dir = "eventos/{$evento->id}";
+            $cambio = false;
+
+            if ($this->baseExcelFile) {
+                $stored = $this->baseExcelFile->storeAs($dir, 'base_evento.xlsx');
+                $evento->base_excel_path = $stored;
+                $this->baseExcelPath = $stored;
+                $cambio = true;
+            }
+
+            if ($this->controlesExcelFile) {
+                $stored = $this->controlesExcelFile->storeAs($dir, 'controles.xlsx');
+                $evento->controles_excel_path = $stored;
+                $this->controlesExcelPath = $stored;
+                $cambio = true;
+            }
+
+            if ($cambio) {
+                $evento->save();
+            }
 
             AuditLog::create([
                 'modulo' => 'eventos',

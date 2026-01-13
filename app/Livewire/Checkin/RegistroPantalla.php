@@ -18,8 +18,14 @@ class RegistroPantalla extends Component
     public ?int $eventoId = null; // ✅ ahora viene del contexto del puesto
     public ?int $inmuebleBaseId = null;
     public ?string $estado = null;
+
     public ?int $controlNumero = null;
+    public ?string $controlSerial = null; // ✅ serial/código del control
+
     public ?string $inmuebleLabel = null;
+    public ?string $propietarioLabel = null; // ✅ para la vista
+    public ?float $coefInmueble = null;      // ✅ coeficiente SOLO del inmueble
+
 
     // asistente
     public ?string $asistenteNombre = null;
@@ -47,6 +53,19 @@ class RegistroPantalla extends Component
     public ?string $controlNumeroInput = null;
     public ?string $controlMsg = null;
     public ?string $controlError = null;
+
+    // UI: preview mientras digita (sin asignar todavía)
+    public ?string $controlPreviewSerial = null;
+    public ?string $controlPreviewEstado = null;
+
+    // ✅ Control "en cola" (se asigna realmente solo al Guardar asistente)
+    public ?int $controlPendienteNumero = null;
+    public ?int $controlPendienteId = null;
+
+    // Modal elegante de control
+    public bool $showControlModal = false;
+    public ?string $controlModalTitle = null;
+    public ?string $controlModalBody = null;
 
     // ---- Representación / Poderes ----
     public ?int $grupoId = null;
@@ -148,45 +167,20 @@ class RegistroPantalla extends Component
         }
 
         // ✅ reset UI de mini-componentes para no dejar "rastros"
-        $this->resetControlUi();
+        $this->resetControlUi(true);
         $this->resetPoderUi();
 
         // ✅ Resolver antes de crear/usar registros_checkin:
         // si el inmueble buscado es PODER, abrimos la cabeza del grupo.
         [$targetId, $msg] = $this->resolveCheckinTarget($inmuebleId);
 
+        $this->requestedPadronId = (int) $targetId;
+
+        // mensajes (solo si aplica)
         $this->checkinMsg = $msg;
         $this->checkinError = null;
 
         $inmuebleId = (int) $targetId;
-
-        // ✅ reset mensajes selección
-        $this->checkinMsg = null;
-        $this->checkinError = null;
-        $this->requestedPadronId = $inmuebleId;
-
-        // ✅ Seguridad: si el inmueble buscado ya está representado como MIEMBRO en un grupo,
-        // y NO es la cabeza, entonces abrimos automáticamente la cabeza del grupo.
-        $miembro = DB::table('representacion_miembros')
-            ->where('evento_id', $this->eventoId)
-            ->where('padron_id', $inmuebleId)
-            ->first();
-
-        if ($miembro) {
-            $grupo = DB::table('representacion_grupos')
-                ->where('id', (int) $miembro->grupo_id)
-                ->where('evento_id', $this->eventoId)
-                ->first();
-
-            if ($grupo && !empty($grupo->cabeza_padron_id)) {
-                $headId = (int) $grupo->cabeza_padron_id;
-
-                if ($headId !== (int) $inmuebleId) {
-                    $this->checkinMsg = "ℹ️ El inmueble {$this->labelInmueble($inmuebleId)} ya está representado en el grupo cuya cabeza es {$this->labelInmueble($headId)}. Abriendo la cabeza automáticamente…";
-                    $inmuebleId = $headId; // 👈 nos vamos directo a la cabeza
-                }
-            }
-        }
 
         // 1) Registro checkin
         $registro = DB::table('registros_checkin')
@@ -219,6 +213,9 @@ class RegistroPantalla extends Component
             ->first();
 
         $this->inmuebleLabel = $padron?->inmueble ?? ("Inmueble #{$this->inmuebleBaseId}");
+        $this->propietarioLabel = $padron?->propietario ?? null;
+        $this->coefInmueble = $padron?->coeficiente !== null ? (float) $padron->coeficiente : null;
+
 
         // 3) Cargar asistente (del registro si existe, si no, precarga desde padrón)
         $this->asistenteNombre = $registro->asistente_nombre ?? ($padron->asistente ?? null);
@@ -235,11 +232,18 @@ class RegistroPantalla extends Component
         $this->pendingAction = null;
         $this->pendingInmuebleId = null;
 
-        // 4) Control asignado (si existe)
+        // 4) Control asignado (si existe) -> cargar número y serial, y bloquear reasignación
         $this->controlNumero = null;
+        $this->controlSerial = null;
+
         if (!is_null($registro->control_id)) {
-            $control = DB::table('controles')->select('numero')->where('id', $registro->control_id)->first();
+            $control = DB::table('controles')
+                ->select('numero', 'serial')
+                ->where('id', $registro->control_id)
+                ->first();
+
             $this->controlNumero = $control?->numero ?? null;
+            $this->controlSerial = $control?->serial ?? null;
         }
 
         // 5) ✅ Representación: asegurar grupo real para ESTE inmueble (sin coronar cabezas indebidas)
@@ -248,13 +252,7 @@ class RegistroPantalla extends Component
         // 6) Limpiar búsqueda principal
         $this->search = '';
         $this->results = [];
-
-        // Si no hubo redirección, no dejamos msg viejo pegado
-        if (!$msg) {
-            $this->checkinMsg = null;
-        }
     }
-
     private function resolveCheckinTarget(int $requestedPadronId): array
     {
         if (!$this->eventoId) {
@@ -271,7 +269,6 @@ class RegistroPantalla extends Component
             ->first();
 
         if (!$miembro) {
-            // No pertenece a ningún grupo (caso raro, pero lo dejamos igual)
             return [$requestedPadronId, null];
         }
 
@@ -297,6 +294,8 @@ class RegistroPantalla extends Component
             $this->isCabezaSeleccionada = false;
             return;
         }
+
+        $headPadronId = null;
 
         $miembroGlobal = DB::table('representacion_miembros')
             ->where('evento_id', $this->eventoId)
@@ -328,6 +327,7 @@ class RegistroPantalla extends Component
                     ]);
 
                 $this->grupoId = (int) $gid;
+
                 $grupo = DB::table('representacion_grupos')
                     ->where('id', $gid)
                     ->where('evento_id', $this->eventoId)
@@ -370,6 +370,7 @@ class RegistroPantalla extends Component
                 ->where('grupo_id', $this->grupoId)
                 ->where('padron_id', '!=', $headPadronId)
                 ->update(['es_cabeza' => 0, 'updated_at' => now()]);
+
         } else {
             $grupo = DB::table('representacion_grupos')
                 ->where('evento_id', $this->eventoId)
@@ -394,21 +395,22 @@ class RegistroPantalla extends Component
                 ]);
 
                 $this->grupoId = (int) $gid;
+                $headPadronId = $padronId;
             } else {
                 $this->grupoId = (int) $grupo->id;
+                $headPadronId = (int) ($grupo->cabeza_padron_id ?? $padronId);
 
                 $head = DB::table('representacion_miembros')
                     ->where('evento_id', $this->eventoId)
                     ->where('grupo_id', $this->grupoId)
-                    ->where('padron_id', $padronId)
+                    ->where('padron_id', $headPadronId)
                     ->first();
 
                 if (!$head) {
-                    // ✅ FIX: aquí era $padronId, NO $headPadronId
                     DB::table('representacion_miembros')->insert([
                         'evento_id' => $this->eventoId,
                         'grupo_id' => $this->grupoId,
-                        'padron_id' => $padronId,
+                        'padron_id' => $headPadronId,
                         'es_cabeza' => 1,
                         'created_at' => now(),
                         'updated_at' => now(),
@@ -417,12 +419,15 @@ class RegistroPantalla extends Component
             }
         }
 
+        // ✅ reflejar grupo en el registro_checkin actual
         if ($this->registroId && $this->grupoId) {
             DB::table('registros_checkin')
                 ->where('id', $this->registroId)
                 ->where('evento_id', $this->eventoId)
                 ->update(['grupo_id' => $this->grupoId]);
         }
+
+        $this->isCabezaSeleccionada = ((int) $padronId === (int) $headPadronId);
 
         $this->loadMiembros();
     }
@@ -497,6 +502,162 @@ class RegistroPantalla extends Component
         ])->toArray();
     }
 
+    /**
+     * Preview del control mientras digita (NO asigna)
+     */
+    public function updatedControlNumeroInput(): void
+    {
+        $this->controlPreviewSerial = null;
+        $this->controlPreviewEstado = null;
+        $this->controlError = null;
+        $this->controlMsg = null;
+
+        $raw = trim((string) $this->controlNumeroInput);
+
+        if (!$this->eventoId || $raw === '' || !ctype_digit($raw)) {
+            return;
+        }
+
+        $num = (int) $raw;
+        if ($num <= 0) {
+            return;
+        }
+
+        $c = DB::table('controles')
+            ->where('evento_id', $this->eventoId)
+            ->where('numero', $num)
+            ->first(['serial', 'estado']);
+
+        if ($c) {
+            $this->controlPreviewSerial = (string) $c->serial;
+            $this->controlPreviewEstado = (string) $c->estado; // LIBRE / ASIGNADO
+        }
+    }
+
+    /**
+     * Confirmar con TAB/Enter/Blur (asigna SOLO si se puede)
+     */
+    public function confirmControl(): void
+    {
+        $this->controlMsg = null;
+        $this->controlError = null;
+
+        // Limpia "pendiente" cada vez que intentan confirmar
+        $this->controlPendienteNumero = null;
+        $this->controlPendienteId = null;
+
+        if (!$this->eventoId) {
+            $this->openControlModal('Sin evento activo', 'No hay evento activo en este puesto.');
+            return;
+        }
+
+        if (!$this->registroId) {
+            $this->openControlModal('Selecciona un inmueble', 'Primero selecciona un inmueble.');
+            return;
+        }
+
+        if (!$this->isCabezaSeleccionada) {
+            $this->openControlModal('Control bloqueado', 'Este inmueble es un PODER. El control solo se asigna desde la cabeza del grupo.');
+            return;
+        }
+
+        // Si ya tiene control asignado, no permitir “preparar” otro
+        $actual = DB::table('registros_checkin')
+            ->where('evento_id', $this->eventoId)
+            ->where('id', $this->registroId)
+            ->first(['control_id']);
+
+        if ($actual && !is_null($actual->control_id)) {
+            $this->openControlModal('Ya tiene control', 'Este inmueble ya tiene un control asignado. No se puede preparar otro.');
+            $this->controlNumeroInput = null;
+            $this->controlPreviewSerial = null;
+            $this->controlPreviewEstado = null;
+            return;
+        }
+
+        $raw = trim((string) $this->controlNumeroInput);
+
+        if ($raw === '' || !ctype_digit($raw) || (int) $raw <= 0) {
+            $this->controlError = 'Ingresa un número de control válido.';
+            return;
+        }
+
+        $num = (int) $raw;
+
+        // Buscar control
+        $c = DB::table('controles')
+            ->where('evento_id', $this->eventoId)
+            ->where('numero', $num)
+            ->first(['id', 'serial', 'estado', 'asignado_a_registro_id']);
+
+        if (!$c) {
+            $this->openControlModal('No existe', "El control #{$num} no existe para este evento.");
+            $this->controlNumeroInput = null;
+            $this->controlPreviewSerial = null;
+            $this->controlPreviewEstado = null;
+            return;
+        }
+
+        // Mostrar preview siempre
+        $this->controlPreviewSerial = (string) $c->serial;
+        $this->controlPreviewEstado = (string) $c->estado;
+
+        // Si no está libre -> modal con detalle
+        if (strtoupper((string) $c->estado) !== 'LIBRE') {
+
+            $msg = "El control #{$num} ({$c->serial}) ya está ASIGNADO.";
+
+            if (!empty($c->asignado_a_registro_id)) {
+                $reg = DB::table('registros_checkin')
+                    ->where('evento_id', $this->eventoId)
+                    ->where('id', (int) $c->asignado_a_registro_id)
+                    ->first(['inmueble_base_id']);
+
+                if ($reg) {
+                    $inm = $this->labelInmueble((int) $reg->inmueble_base_id);
+                    $msg .= " Actualmente está asignado a: {$inm}.";
+                }
+            }
+
+            $this->openControlModal('Control ocupado', $msg);
+
+            // Limpieza para reintento
+            $this->controlNumeroInput = null;
+            $this->controlPendienteNumero = null;
+            $this->controlPendienteId = null;
+            return;
+        }
+
+        // ✅ Está libre: quedará "listo para asignar" (pero NO se asigna aún)
+        $this->controlPendienteNumero = $num;
+        $this->controlPendienteId = (int) $c->id;
+
+        $this->controlMsg = "✅ Control #{$num} ({$c->serial}) listo para asignar. Finaliza con Guardar asistente.";
+    }
+
+    private function openControlModal(string $title, string $body): void
+    {
+        $this->showControlModal = true;
+        $this->controlModalTitle = $title;
+        $this->controlModalBody = $body;
+    }
+
+    public function closeControlModal(): void
+    {
+        $this->showControlModal = false;
+        $this->controlModalTitle = null;
+        $this->controlModalBody = null;
+
+        // reintento limpio
+        $this->controlNumeroInput = null;
+        $this->controlPreviewSerial = null;
+        $this->controlPreviewEstado = null;
+
+        // ✅ limpiar también el pendiente
+        $this->controlPendienteNumero = null;
+        $this->controlPendienteId = null;
+    }
+
     private function labelInmueble(int $padronId): string
     {
         if (!$this->eventoId) {
@@ -511,6 +672,23 @@ class RegistroPantalla extends Component
 
         return $p?->inmueble ?? (string) $padronId;
     }
+
+    /**
+     * Helper: validar si existe una columna (para no romper si aún no la migraste)
+     */
+    private function columnExists(string $table, string $column): bool
+    {
+        try {
+            $cols = DB::select("SHOW COLUMNS FROM {$table}");
+            foreach ($cols as $c) {
+                if (($c->Field ?? null) === $column)
+                    return true;
+            }
+            return false;
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
     public function addPoder(int $padronId): void
     {
         $this->poderError = null;
@@ -521,6 +699,7 @@ class RegistroPantalla extends Component
             return;
         }
 
+        // ✅ No puede agregarse a sí mismo
         if ((int) $padronId === (int) $this->inmuebleBaseId) {
             $this->poderError = 'Ese inmueble ya es la cabeza del grupo.';
             return;
@@ -528,19 +707,41 @@ class RegistroPantalla extends Component
 
         $result = DB::transaction(function () use ($padronId) {
 
+            // ✅ BLOQUEO DURO (con lock) contra carreras entre pantallas:
+            // si ese inmueble ya está CHECKED_IN o tiene control asignado, NO se puede anexar
+            $reg = DB::table('registros_checkin')
+                ->where('evento_id', $this->eventoId)
+                ->where('inmueble_base_id', $padronId)
+                ->lockForUpdate()
+                ->first(['estado', 'control_id', 'checked_in_at']);
+
+            if ($reg) {
+                $estado = strtoupper((string) ($reg->estado ?? ''));
+                $tieneControl = !is_null($reg->control_id);
+
+                if ($estado === 'CHECKED_IN' || $tieneControl) {
+                    return [
+                        'status' => 'locked_checkedin_or_control',
+                        'estado' => $estado,
+                        'tiene_control' => $tieneControl,
+                    ];
+                }
+            }
+
+            // 1) Lock del miembro (si existe)
             $exists = DB::table('representacion_miembros')
                 ->where('evento_id', $this->eventoId)
                 ->where('padron_id', $padronId)
                 ->lockForUpdate()
                 ->first();
 
+            // 2) Si no existe: insertarlo como poder
             if (!$exists) {
-                // ✅ FIX CRÍTICO
                 DB::table('representacion_miembros')->insert([
                     'evento_id' => $this->eventoId,
                     'grupo_id' => $this->grupoId,
-                    'padron_id' => $padronId, // ✅ correcto
-                    'es_cabeza' => 0,          // ✅ poder ≠ cabeza
+                    'padron_id' => $padronId,
+                    'es_cabeza' => 0,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
@@ -548,16 +749,106 @@ class RegistroPantalla extends Component
                 return ['status' => 'inserted'];
             }
 
+            // 3) Si ya está en este grupo: ok informativo
             if ((int) $exists->grupo_id === (int) $this->grupoId) {
                 return ['status' => 'already_in_group'];
             }
 
-            return ['status' => 'blocked'];
+            // 4) Está en otro grupo: decidir si se puede mover o bloquear informando cabeza
+            $otherGroupId = (int) $exists->grupo_id;
+
+            $otherGroup = DB::table('representacion_grupos')
+                ->where('evento_id', $this->eventoId)
+                ->where('id', $otherGroupId)
+                ->lockForUpdate()
+                ->first(['id', 'cabeza_padron_id']);
+
+            $headPadronId = (int) ($otherGroup->cabeza_padron_id ?? 0);
+
+            // Si no existe el grupo o no hay cabeza definida, bloqueamos (inconsistencia)
+            if (!$otherGroup || $headPadronId <= 0) {
+                return [
+                    'status' => 'blocked_in_other_group',
+                    'head_padron_id' => null,
+                ];
+            }
+
+            // ✅ Caso A: está en su grupo base (cabeza = él mismo)
+            if ($headPadronId === (int) $padronId) {
+
+                $cnt = (int) DB::table('representacion_miembros')
+                    ->where('evento_id', $this->eventoId)
+                    ->where('grupo_id', $otherGroupId)
+                    ->lockForUpdate()
+                    ->count();
+
+                // solo si está SOLO, lo dejamos mover como poder al grupo actual
+                if ($cnt === 1) {
+                    DB::table('representacion_miembros')
+                        ->where('evento_id', $this->eventoId)
+                        ->where('id', $exists->id)
+                        ->update([
+                            'grupo_id' => $this->grupoId,
+                            'es_cabeza' => 0,
+                            'updated_at' => now(),
+                        ]);
+
+                    return ['status' => 'moved_from_base'];
+                }
+
+                // no está solo en su base -> bloqueamos e informamos cabeza (él mismo)
+                return [
+                    'status' => 'blocked_in_other_group',
+                    'head_padron_id' => $headPadronId,
+                ];
+            }
+
+            // ✅ Caso B: pertenece a un grupo cuya cabeza es OTRO inmueble -> bloqueamos e informamos cuál
+            return [
+                'status' => 'blocked_in_other_group',
+                'head_padron_id' => $headPadronId,
+            ];
         });
 
-        if ($result['status'] === 'inserted') {
+        // ✅ Manejo de respuesta post-transacción
+        if (($result['status'] ?? null) === 'locked_checkedin_or_control') {
+            $label = $this->labelInmueble($padronId);
+
+            $detalle = [];
+            if (($result['estado'] ?? '') === 'CHECKED_IN')
+                $detalle[] = 'ya está CHECKED_IN';
+            if (!empty($result['tiene_control']))
+                $detalle[] = 'ya tiene control asignado';
+
+            $this->openControlModal(
+                'No se puede anexar',
+                "El inmueble {$label} no se puede anexar como poder porque " . implode(' y ', $detalle) . "."
+            );
+
+            $this->poderSearch = '';
+            $this->poderResults = [];
+            return;
+        }
+
+        if (($result['status'] ?? null) === 'blocked_in_other_group') {
+            $label = $this->labelInmueble($padronId);
+
+            $headId = $result['head_padron_id'] ?? null;
+            $headLabel = $headId ? $this->labelInmueble((int) $headId) : 'otro inmueble';
+
+            $this->openControlModal(
+                'No se puede anexar',
+                "El inmueble {$label} ya está asignado a un grupo cuya cabeza es {$headLabel}. Debes abrir la cabeza para gestionarlo desde allá."
+            );
+
+            $this->poderSearch = '';
+            $this->poderResults = [];
+            return;
+        }
+
+        if (in_array(($result['status'] ?? null), ['inserted', 'moved_from_base'], true)) {
             $this->poderMsg = '✅ Poder anexado correctamente.';
-        } elseif ($result['status'] === 'already_in_group') {
+        } elseif (($result['status'] ?? null) === 'already_in_group') {
             $this->poderMsg = 'ℹ️ Ese inmueble ya pertenece a este grupo.';
         } else {
             $this->poderError = 'No se pudo anexar el poder.';
@@ -567,6 +858,7 @@ class RegistroPantalla extends Component
         $this->poderResults = [];
         $this->loadMiembros();
     }
+
 
     public function removePoder(int $miembroId): void
     {
@@ -702,30 +994,42 @@ class RegistroPantalla extends Component
                         'updated_at' => now(),
                     ]);
 
-                // 6) Limpiar (reset) el check-in del poder
+                // 6) ✅ Reset total del check-in del poder (queda “en cero”)
+                $reset = [
+                    'grupo_id' => $grupoBaseId,
+                    'estado' => 'EN_PROCESO',
+
+                    'asistente_nombre' => null,
+                    'asistente_telefono' => null,
+                    'asistente_correo' => null,
+
+                    'control_id' => null,
+                    'control_numero_snapshot' => null,
+
+                    // ✅ deja el inmueble como “no chequeado”
+                    'checked_in_at' => null,
+                    'checked_in_by_user_id' => null,
+                    'station_id' => null,
+
+                    'updated_at' => now(),
+                ];
+
+                // ✅ si existe la columna control_serial_snapshot, también la limpiamos
+                if (\Illuminate\Support\Facades\Schema::hasColumn('registros_checkin', 'control_serial_snapshot')) {
+                    $reset['control_serial_snapshot'] = null;
+                }
+
                 if ($regPoder) {
                     DB::table('registros_checkin')
                         ->where('id', $regPoder->id)
                         ->where('evento_id', $eventoId)
-                        ->update([
-                            'grupo_id' => $grupoBaseId,
-                            'estado' => 'EN_PROCESO',
-                            'asistente_nombre' => null,
-                            'asistente_telefono' => null,
-                            'asistente_correo' => null,
-                            'control_id' => null,
-                            'control_numero_snapshot' => null,
-                            'updated_at' => now(),
-                        ]);
+                        ->update($reset);
                 } else {
-                    DB::table('registros_checkin')->insert([
+                    DB::table('registros_checkin')->insert(array_merge($reset, [
                         'evento_id' => $eventoId,
-                        'grupo_id' => $grupoBaseId,
                         'inmueble_base_id' => $padronId,
-                        'estado' => 'EN_PROCESO',
                         'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
+                    ]));
                 }
 
                 return [
@@ -1035,28 +1339,118 @@ class RegistroPantalla extends Component
 
     public function saveAsistente(): void
     {
-        $tel = trim((string) $this->asistenteTelefono);
+        $this->checkinMsg = null;
+        $this->checkinError = null;
 
+        if (!$this->eventoId || !$this->registroId) {
+            $this->checkinError = 'Primero selecciona un inmueble.';
+            return;
+        }
+
+        // ✅ Teléfono obligatorio
+        $tel = trim((string) $this->asistenteTelefono);
         if ($tel === '') {
             $this->errorTelefono = 'El teléfono es obligatorio para el registro.';
             return;
         }
-
-        DB::table('registros_checkin')
-            ->where('id', $this->registroId)
-            ->where('evento_id', $this->eventoId)
-            ->update([
-                'asistente_nombre' => $this->asistenteNombre,
-                'asistente_telefono' => $this->asistenteTelefono,
-                'asistente_correo' => $this->asistenteCorreo,
-                'updated_at' => now(),
-            ]);
-
         $this->errorTelefono = null;
 
+        // ✅ Solo desde cabeza se “cierra” check-in (si es poder, no)
+        if (!$this->isCabezaSeleccionada) {
+            $this->checkinError = 'Este inmueble es un PODER. El check-in final se cierra únicamente desde la cabeza del grupo.';
+            return;
+        }
+
+        DB::transaction(function () {
+
+            // Lock del registro
+            $reg = DB::table('registros_checkin')
+                ->where('evento_id', $this->eventoId)
+                ->where('id', $this->registroId)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$reg) {
+                throw new \RuntimeException('No se encontró el registro.');
+            }
+
+            // Si NO tiene control aún, debe existir uno "pendiente"
+            if (is_null($reg->control_id)) {
+
+                if (!$this->controlPendienteNumero || !$this->controlPendienteId) {
+                    // No hay control listo
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'control' => 'Debes preparar un control (Tab/Enter) antes de guardar el asistente.',
+                    ]);
+                }
+
+                // Lock del control pendiente y re-validación dura
+                $control = DB::table('controles')
+                    ->where('evento_id', $this->eventoId)
+                    ->where('id', $this->controlPendienteId)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$control) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'control' => 'El control preparado ya no existe. Intenta nuevamente.',
+                    ]);
+                }
+
+                if (strtoupper((string) $control->estado) !== 'LIBRE') {
+                    $msg = "El control #{$control->numero} ({$control->serial}) ya no está libre.";
+                    throw \Illuminate\Validation\ValidationException::withMessages(['control' => $msg]);
+                }
+
+                // ✅ Asignación real con tu servicio (reglas centralizadas)
+                app(ControlService::class)->assignByNumero($this->eventoId, $this->registroId, (int) $this->controlPendienteNumero);
+            }
+
+            // Refrescar control asignado para pintar header bien
+            $reg2 = DB::table('registros_checkin')
+                ->where('evento_id', $this->eventoId)
+                ->where('id', $this->registroId)
+                ->lockForUpdate()
+                ->first(['control_id']);
+
+            // ✅ Guardar asistente + marcar “cerrado / check-in final”
+            DB::table('registros_checkin')
+                ->where('id', $this->registroId)
+                ->where('evento_id', $this->eventoId)
+                ->update([
+                    'asistente_nombre' => $this->asistenteNombre,
+                    'asistente_telefono' => $this->asistenteTelefono,
+                    'asistente_correo' => $this->asistenteCorreo,
+                    'checked_in_at' => now(),
+                    'checked_in_by_user_id' => auth()->id(),
+                    'estado' => 'CHECKED_IN', // ✅ este estado lo vamos a usar para bloquear poderes
+                    'updated_at' => now(),
+                ]);
+
+            // Cargar control a variables UI
+            $this->controlNumero = null;
+            $this->controlSerial = null;
+
+            if ($reg2 && !is_null($reg2->control_id)) {
+                $c = DB::table('controles')->where('id', $reg2->control_id)->first(['numero', 'serial']);
+                $this->controlNumero = $c?->numero ?? null;
+                $this->controlSerial = $c?->serial ?? null;
+            }
+        });
+
+        // originales
         $this->asistenteNombreOriginal = $this->asistenteNombre;
         $this->asistenteTelefonoOriginal = $this->asistenteTelefono;
         $this->asistenteCorreoOriginal = $this->asistenteCorreo;
+
+        // ✅ ya quedó finalizado, limpia el pendiente (para que no intenten “re-usarlo”)
+        $this->controlNumeroInput = null;
+        $this->controlPreviewSerial = null;
+        $this->controlPreviewEstado = null;
+        $this->controlPendienteNumero = null;
+        $this->controlPendienteId = null;
+
+        $this->checkinMsg = '✅ Check-in cerrado correctamente.';
     }
 
     public function hasUnsavedChanges(): bool
@@ -1098,6 +1492,7 @@ class RegistroPantalla extends Component
         }
     }
 
+    // ---- (Dejamos tu assignControl por compatibilidad, pero ya NO lo usa el Blade si estás con confirmControl) ----
     public function assignControl(ControlService $controlService): void
     {
         $this->controlMsg = null;
@@ -1113,7 +1508,6 @@ class RegistroPantalla extends Component
             return;
         }
 
-        // ✅ Seguridad: el control solo se asigna desde la cabeza del grupo
         if (!$this->isCabezaSeleccionada) {
             $this->controlError = 'Este inmueble es un poder dentro de un grupo. El control debe asignarse desde la cabeza del grupo.';
             return;
@@ -1126,7 +1520,7 @@ class RegistroPantalla extends Component
             ->first();
 
         if ($actual && !is_null($actual->control_id)) {
-            $this->controlError = 'Este registro ya tiene un control asignado. (Luego habilitamos cambiar control con autorización).';
+            $this->controlError = 'Este registro ya tiene un control asignado.';
             return;
         }
 
@@ -1160,21 +1554,33 @@ class RegistroPantalla extends Component
             ->first();
 
         $this->controlNumero = null;
+        $this->controlSerial = null;
 
         if ($registro && !is_null($registro->control_id)) {
-            $control = DB::table('controles')->select('numero')->where('id', $registro->control_id)->first();
+            $control = DB::table('controles')->select('numero', 'serial')->where('id', $registro->control_id)->first();
+
             $this->controlNumero = $control?->numero ?? null;
+            $this->controlSerial = $control?->serial ?? null;
         }
 
         $this->controlMsg = "✅ Control #{$num} asignado correctamente.";
         $this->controlNumeroInput = null;
     }
 
-    private function resetControlUi(): void
+    private function resetControlUi(bool $full = false): void
     {
         $this->controlNumeroInput = null;
         $this->controlMsg = null;
         $this->controlError = null;
+
+        $this->controlPreviewSerial = null;
+        $this->controlPreviewEstado = null;
+
+        if ($full) {
+            $this->showControlModal = false;
+            $this->controlModalTitle = null;
+            $this->controlModalBody = null;
+        }
     }
 
     private function resetPoderUi(): void
@@ -1197,7 +1603,10 @@ class RegistroPantalla extends Component
         $this->registroId = null;
         $this->inmuebleBaseId = null;
         $this->estado = null;
+
         $this->controlNumero = null;
+        $this->controlSerial = null;
+
         $this->inmuebleLabel = null;
 
         $this->asistenteNombre = null;
@@ -1214,14 +1623,18 @@ class RegistroPantalla extends Component
 
         $this->grupoId = null;
         $this->miembros = [];
+        $this->isCabezaSeleccionada = false;
         $this->coefTotal = null;
         $this->poderCount = null;
 
         $this->confirmDiscard = false;
         $this->pendingAction = null;
         $this->pendingInmuebleId = null;
+        $this->propietarioLabel = null;
+        $this->coefInmueble = null;
 
-        $this->resetControlUi();
+
+        $this->resetControlUi(true);
         $this->resetPoderUi();
 
         $this->search = '';

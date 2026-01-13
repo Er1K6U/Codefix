@@ -7,6 +7,8 @@ use Livewire\WithPagination;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\DB;
 use App\Domain\Event\Models\Evento;
+use Illuminate\Support\Facades\Artisan;
+
 
 class Index extends Component
 {
@@ -27,6 +29,10 @@ class Index extends Component
     public bool $confirmDelete = false;
     public ?int $deleteEventId = null;
     public ?string $deleteEventTitle = null;
+    // 💾 Backup UI
+    public bool $showBackupResult = false;
+    public ?string $backupResultMsg = null;
+
 
     public function mount(): void
     {
@@ -197,6 +203,48 @@ class Index extends Component
 
         session()->flash('ok', 'Evento eliminado completamente. Ya puedes crear uno nuevo.');
         return redirect()->route('eventos.index');
+    }
+
+    // =========================
+    // 💾 BACKUP SQL (ADMIN)
+    // =========================
+    public function backupEvento(): void
+    {
+        Gate::authorize('eventos.editar');
+
+        $note = 'desde_ui_' . now()->format('Ymd_His');
+
+        \Artisan::call('evento:backup', [
+            '--note' => $note,
+        ]);
+
+        $out = trim(\Artisan::output());
+
+        // Dejamos un mensaje corto y lindo
+        // Tu comando termina con: "✅ Backup creado: ....sql"
+        $msg = 'Backup generado correctamente.';
+
+        if ($out !== '') {
+            $lines = array_values(array_filter(array_map('trim', explode("\n", $out))));
+            $last = end($lines);
+
+            if ($last && str_contains($last, 'Backup creado:')) {
+                // Extraer solo el nombre del archivo (sin la ruta)
+                $path = trim(str_replace('✅ Backup creado:', '', $last));
+                $filename = basename($path);
+
+                $msg = "Backup creado: {$filename}";
+            }
+        }
+
+        $this->backupResultMsg = $msg;
+        $this->showBackupResult = true;
+    }
+
+    public function closeBackupResult(): void
+    {
+        $this->showBackupResult = false;
+        $this->backupResultMsg = null;
     }
 
     public function render()

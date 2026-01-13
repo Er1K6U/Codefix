@@ -4,22 +4,58 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class ImportBaseEvento extends Command
 {
-    protected $signature = 'base:import {evento_id} {file} {--wipe : Borra la base anterior del evento antes de importar}';
+    protected $signature = 'base:import {--wipe : Borra la base anterior del evento antes de importar}';
     protected $description = 'Importa la Base del evento (Excel) a evento_padron y crea grupos base (cabeza sola)';
 
     public function handle(): int
     {
-        $eventoId = (int) $this->argument('evento_id');
-        $file = (string) $this->argument('file');
         $wipe = (bool) $this->option('wipe');
 
-        if (!is_file($file)) {
-            $this->error("No existe el archivo: {$file}");
+        // ✅ MODO EVENTO ÚNICO:
+        // 1) si hay is_active=1 usamos ese
+        // 2) si no, usamos el último evento
+        $evento = DB::table('eventos')
+            ->where('is_active', 1)
+            ->orderByDesc('id')
+            ->first();
+
+        if (!$evento) {
+            $evento = DB::table('eventos')
+                ->orderByDesc('id')
+                ->first();
+        }
+
+        if (!$evento) {
+            $this->error("No existe ningún evento en la base de datos.");
             return self::FAILURE;
         }
+
+        $eventoId = (int) $evento->id;
+
+        // ✅ El archivo se toma desde la BD (lo cargaste al crear/editar evento)
+        $relativePath = $evento->base_excel_path ?? null;
+
+        if (!$relativePath) {
+            $this->error("El evento #{$eventoId} NO tiene base_excel_path en BD. Sube el Excel Base en el formulario del evento.");
+            return self::FAILURE;
+        }
+
+        // En tu proyecto el disco local apunta a storage/app/private (por eso lo ves así en VSCode)
+        // Storage::path() devuelve la ruta real en el disco.
+        $file = Storage::path($relativePath);
+
+        if (!is_file($file)) {
+            $this->error("No existe el archivo en disco: {$file}");
+            $this->line("Ruta guardada en BD: {$relativePath}");
+            return self::FAILURE;
+        }
+
+        $this->info("Evento seleccionado: #{$eventoId} - {$evento->titulo}");
+        $this->info("Archivo base: {$relativePath}");
 
         // Leer primera hoja como array (con encabezados)
         $sheets = app(\Maatwebsite\Excel\Excel::class)->toArray(null, $file);
@@ -104,25 +140,18 @@ class ImportBaseEvento extends Command
         }
 
         // Validación fuerte: suma coeficiente ~ 100
-        // Permitimos pequeñas variaciones por decimales (ej 99.9999 / 100.0001)
         if (abs($sumCoef - 100.0) > 0.01) {
             $this->error("La suma de coeficientes NO da 100. Da: " . number_format($sumCoef, 4, '.', ''));
             return self::FAILURE;
         }
 
-        DB::transaction(function () use ($eventoId, $wipe, $data, $count) {
+        DB::transaction(function () use ($eventoId, $wipe, $data) {
             if ($wipe) {
-                // ✅ Ahora que representacion_miembros tiene evento_id, borramos directo por evento
-                DB::table('representacion_miembros')
-                    ->where('evento_id', $eventoId)
-                    ->delete();
-
+                DB::table('representacion_miembros')->where('evento_id', $eventoId)->delete();
                 DB::table('representacion_grupos')->where('evento_id', $eventoId)->delete();
-
                 DB::table('evento_padron')->where('evento_id', $eventoId)->delete();
             }
 
-            // Insert por chunks (rendimiento)
             foreach (array_chunk($data, 500) as $chunk) {
                 DB::table('evento_padron')->insert($chunk);
             }
@@ -176,7 +205,6 @@ class ImportBaseEvento extends Command
 
     private function mapColumns(array $header): array
     {
-        // Diccionario de sinónimos: ajustable si cambias nombres
         $syn = [
             'inmueble' => ['inmueble', 'referencia', 'unidad', 'apto', 'apartamento', 'inmueble_no'],
             'propietario' => ['propietario', 'dueno', 'dueño', 'nombre_propietario'],
@@ -209,7 +237,6 @@ class ImportBaseEvento extends Command
 
     private function toDecimal($value): float
     {
-        // Acepta 0.43, 0,43, "0.4300", etc.
         $v = is_string($value) ? trim($value) : $value;
         if (is_string($v)) {
             $v = str_replace([' ', "\u{00A0}"], '', $v);

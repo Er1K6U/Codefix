@@ -89,15 +89,32 @@
             </div>
         </div>
 
-        {{-- ✅ Modo evento único: Crear SOLO si NO hay eventos y SOLO ADMIN --}}
-        @can('eventos.crear')
-            @if(\App\Domain\Event\Models\Evento::count() === 0)
-                <a href="{{ route('eventos.crear') }}"
-                   class="rounded-xl bg-[#0F3D4C] px-4 py-2 font-semibold text-white hover:opacity-90 transition">
-                    + Nuevo evento
-                </a>
-            @endif
-        @endcan
+        {{-- ✅ Acciones (modo evento único) --}}
+        <div class="flex items-center gap-2">
+            {{-- 💾 Backup SQL (solo ADMIN) --}}
+            @can('eventos.editar')
+                <button
+                    wire:click="backupEvento"
+                    wire:loading.attr="disabled"
+                    wire:target="backupEvento"
+                    class="rounded-xl border border-[#0F3D4C]/20 bg-white px-4 py-2 font-semibold text-[#0F3D4C] hover:bg-[#0F3D4C]/5 transition disabled:opacity-60"
+                    title="Generar backup SQL en storage/app/backups"
+                >
+                    <span wire:loading.remove wire:target="backupEvento">💾 Backup SQL</span>
+                    <span wire:loading wire:target="backupEvento">Generando…</span>
+                </button>
+            @endcan
+
+            {{-- + Nuevo evento (solo si NO hay eventos) --}}
+            @can('eventos.crear')
+                @if(\App\Domain\Event\Models\Evento::count() === 0)
+                    <a href="{{ route('eventos.crear') }}"
+                       class="rounded-xl bg-[#0F3D4C] px-4 py-2 font-semibold text-white hover:opacity-90 transition">
+                        + Nuevo evento
+                    </a>
+                @endif
+            @endcan
+        </div>
     </div>
 
     <div class="mb-4">
@@ -320,6 +337,74 @@
                     >
                         Sí, eliminar todo
                     </button>
+                </div>
+            </div>
+        </div>
+    @endif
+    {{-- 💾 MODAL: Generando backup (loading) --}}
+    <div
+        wire:loading.flex
+        wire:target="backupEvento"
+        class="fixed inset-0 z-50 items-center justify-center p-4"
+        aria-modal="true"
+        role="dialog"
+    >
+        <div class="absolute inset-0 bg-black/40"></div>
+
+        <div class="relative w-full max-w-md rounded-2xl bg-white shadow-2xl border border-gray-200 p-6">
+            <div class="flex items-start gap-3">
+                <div class="mt-1 flex h-10 w-10 items-center justify-center rounded-xl bg-[#0F3D4C]/10 border border-[#0F3D4C]/20">
+                    <svg class="h-6 w-6 text-[#0F3D4C] animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                    </svg>
+                </div>
+
+                <div class="flex-1">
+                    <h3 class="text-lg font-black text-[#2E2E2E]">Generando backup…</h3>
+                    <p class="mt-2 text-sm text-gray-700 leading-relaxed">
+                        Esto crea un archivo SQL en <span class="font-semibold">storage/app/backups</span>.
+                    </p>
+
+                    <div class="mt-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
+                        No cierres esta pestaña mientras termina.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- 💾 MODAL: Resultado backup --}}
+    @if(!empty($showBackupResult))
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4" aria-modal="true" role="dialog">
+            <div class="absolute inset-0 bg-black/40" wire:click="closeBackupResult"></div>
+
+            <div class="relative w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-gray-200 p-6">
+                <div class="flex items-start gap-3">
+                    <div class="mt-1 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 border border-emerald-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-emerald-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M5 13l4 4L19 7" />
+                        </svg>
+                    </div>
+
+                    <div class="flex-1">
+                        <h3 class="text-lg font-black text-[#2E2E2E]">Backup listo</h3>
+
+                        <p class="mt-2 text-sm text-gray-700 leading-relaxed">
+                            {{ $backupResultMsg }}
+                        </p>
+
+                        <div class="mt-6 flex items-center justify-end gap-2">
+                            <button
+                                type="button"
+                                wire:click="closeBackupResult"
+                                class="rounded-xl bg-[#0F3D4C] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 transition"
+                            >
+                                Entendido
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
