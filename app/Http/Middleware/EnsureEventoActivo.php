@@ -10,17 +10,14 @@ class EnsureEventoActivo
 {
     public function handle(Request $request, Closure $next)
     {
-        // 🎯 Evento activo GLOBAL (sin stations, sin IP)
-        $eventoId = app(EventContext::class)->eventoId();
+        $eid = app(EventContext::class)->eventoId();
 
-        if (!$eventoId) {
+        if (!$eid) {
+            // ✅ Este es el mensaje que tu blade ya convierte en modal bonito
             return redirect()
                 ->route('eventos.index')
-                ->with('warning', 'Debes activar un evento primero.');
+                ->with('warning', 'No hay evento activo en este puesto. Activa un evento para poder continuar al check-in.');
         }
-
-        // (Opcional) dejar el evento disponible en el request
-        $request->attributes->set('active_event_id', $eventoId);
 
         return $next($request);
     }

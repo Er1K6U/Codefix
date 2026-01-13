@@ -23,18 +23,12 @@
                 type="text"
                 wire:model.live="titulo"
                 class="mt-1 w-full rounded-xl border-gray-300 focus:ring-[#0F3D4C]"
+                placeholder="Ej: Asamblea Naranjo 2026"
             >
+            <p class="mt-1 text-xs text-gray-500">
+                El slug se generará automáticamente a partir del título (ya no se pide manual).
+            </p>
             @error('titulo') <p class="text-red-600 text-sm">{{ $message }}</p> @enderror
-        </div>
-
-        <div>
-            <label class="text-sm font-semibold text-gray-700">Slug</label>
-            <input
-                type="text"
-                wire:model.live="slug"
-                class="mt-1 w-full rounded-xl border-gray-300 font-mono focus:ring-[#0F3D4C]"
-            >
-            @error('slug') <p class="text-red-600 text-sm">{{ $message }}</p> @enderror
         </div>
 
         <div>
@@ -47,7 +41,59 @@
           ></textarea>
           @error('descripcion') <p class="text-red-600 text-sm">{{ $message }}</p> @enderror
         </div>
-        
+
+        {{-- ✅ Excel base del evento (padrón) --}}
+        <div class="mt-6">
+            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                Excel base del evento (Padrón / Coeficientes)
+            </label>
+
+            <input
+                type="file"
+                wire:model="baseExcelFile"
+                accept=".xlsx,.xls"
+                class="block w-full text-sm text-gray-700
+                       file:mr-4 file:py-2 file:px-4
+                       file:rounded-xl file:border-0
+                       file:bg-[#0F3D4C] file:text-white
+                       hover:file:opacity-90 transition
+                       rounded-xl border-gray-300"
+            />
+            <p class="mt-2 text-xs text-gray-500">
+                Sube el archivo Excel de base. Se guardará en <span class="font-mono">storage/app/imports</span>.
+            </p>
+
+            @error('baseExcelFile')
+                <p class="mt-2 text-sm text-red-600 font-semibold">{{ $message }}</p>
+            @enderror
+        </div>
+
+        {{-- ✅ Excel controles --}}
+        <div class="mt-4">
+            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                Excel de controles
+            </label>
+
+            <input
+                type="file"
+                wire:model="controlesExcelFile"
+                accept=".xlsx,.xls"
+                class="block w-full text-sm text-gray-700
+                       file:mr-4 file:py-2 file:px-4
+                       file:rounded-xl file:border-0
+                       file:bg-[#0F3D4C] file:text-white
+                       hover:file:opacity-90 transition
+                       rounded-xl border-gray-300"
+            />
+            <p class="mt-2 text-xs text-gray-500">
+                Sube el Excel con la numeración de controles. También se guardará en <span class="font-mono">storage/app/imports</span>.
+            </p>
+
+            @error('controlesExcelFile')
+                <p class="mt-2 text-sm text-red-600 font-semibold">{{ $message }}</p>
+            @enderror
+        </div>
+
         {{-- Imagen del evento --}}
         <div class="mt-6">
             <label class="block text-sm font-semibold text-gray-700 mb-2">

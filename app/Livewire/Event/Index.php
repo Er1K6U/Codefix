@@ -5,9 +5,8 @@ namespace App\Livewire\Event;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\DB;
 use App\Domain\Event\Models\Evento;
-use App\Models\AuditLog;
-use App\Models\Station;
 
 class Index extends Component
 {
@@ -15,81 +14,66 @@ class Index extends Component
 
     public string $buscar = '';
 
-    // Estado del "puesto" (PC)
-    public ?Station $station = null;
+    // “Puesto” ahora es por sesión (independiente por PC/navegador)
     public ?int $activeEventId = null;
+    public ?string $currentEventTitle = null;
 
-    // Modal de confirmación
+    // modal confirmación cambio
     public bool $confirmChange = false;
     public ?int $pendingEventId = null;
     public ?string $pendingEventTitle = null;
-    public ?string $currentEventTitle = null;
+
+    // 🧹 modal confirmación eliminar
+    public bool $confirmDelete = false;
+    public ?int $deleteEventId = null;
+    public ?string $deleteEventTitle = null;
 
     public function mount(): void
     {
-        $this->loadStation();
+        $this->syncFromSession();
     }
 
-    public function updatingBuscar()
+    public function updatedBuscar(): void
     {
         $this->resetPage();
     }
 
-    private function loadStation(): void
+    private function syncFromSession(): void
     {
-        // Identificamos el PC por IP (red local)
-        $ip = request()->ip();
-
-        $this->station = Station::firstOrCreate(
-            ['ip' => $ip],
-            ['nombre' => null, 'active_event_id' => null]
-        );
-
-        // (Recomendado) dejamos station_id en sesión para todo el sistema
-        session(['station_id' => $this->station->id]);
-
-        // Preferimos el campo viejo (active_event_id) y si no existe, usamos el nuevo (active_evento_id)
-        $this->activeEventId = (int) (
-            $this->station->active_event_id
-            ?? $this->station->active_evento_id
-            ?? 0
-        ) ?: null;
+        $this->activeEventId = session('active_event_id');
 
         if ($this->activeEventId) {
-            $this->currentEventTitle = Evento::whereKey($this->activeEventId)->value('titulo');
+            $this->currentEventTitle = Evento::where('id', $this->activeEventId)->value('titulo');
         } else {
             $this->currentEventTitle = null;
         }
     }
 
-    /**
-     * Activar un evento en ESTE puesto (PC).
-     * Si ya hay otro activo, pedimos confirmación.
-     */
-    public function activateForThisStation(int $eventoId): void
+    // ✅ Activar “en este puesto” (sesión) y mandar a check-in
+    public function activateForThisStation(int $eventoId)
     {
-        // ✅ Permiso específico para activar evento en puesto
         Gate::authorize('eventos.activar_puesto');
 
         $evento = Evento::findOrFail($eventoId);
 
-        // Si ya está activo en este puesto, no hacemos nada
-        if ($this->activeEventId === $evento->id) {
-            session()->flash('ok', 'Este evento ya está activo en este puesto.');
+        if (!(bool) $evento->activo) {
+            session()->flash('warning', 'Este evento está deshabilitado. Primero debes habilitarlo.');
             return;
         }
 
-        // Si hay uno activo diferente, abrimos modal
-        if ($this->activeEventId) {
-            $this->pendingEventId = $evento->id;
-            $this->pendingEventTitle = $evento->titulo;
+        if ($this->activeEventId && (int) $this->activeEventId !== (int) $eventoId) {
             $this->confirmChange = true;
+            $this->pendingEventId = $eventoId;
+            $this->pendingEventTitle = $evento->titulo;
             return;
         }
 
-        // Si no hay activo, activamos directo
-        $this->setActiveEvent($evento->id);
-        session()->flash('ok', 'Evento activado en este puesto.');
+        session(['active_event_id' => $eventoId]);
+        $this->syncFromSession();
+
+        session()->flash('ok', 'Evento activo en este puesto actualizado.');
+
+        return redirect()->route('checkin');
     }
 
     public function cancelChange(): void
@@ -99,9 +83,8 @@ class Index extends Component
         $this->pendingEventTitle = null;
     }
 
-    public function confirmChangeEvent(): void
+    public function confirmChangeEvent()
     {
-        // ✅ Permiso específico para cambiar el evento del puesto
         Gate::authorize('eventos.activar_puesto');
 
         if (!$this->pendingEventId) {
@@ -109,153 +92,120 @@ class Index extends Component
             return;
         }
 
-        $this->setActiveEvent($this->pendingEventId);
+        $evento = Evento::findOrFail($this->pendingEventId);
 
-        $this->confirmChange = false;
-        $this->pendingEventId = null;
-        $this->pendingEventTitle = null;
+        if (!(bool) $evento->activo) {
+            session()->flash('warning', 'Este evento está deshabilitado. Primero debes habilitarlo.');
+            $this->cancelChange();
+            return;
+        }
 
-        session()->flash('ok', 'Evento cambiado para este puesto.');
+        session(['active_event_id' => (int) $this->pendingEventId]);
+        $this->syncFromSession();
+
+        $this->cancelChange();
+
+        session()->flash('ok', 'Evento activo en este puesto actualizado.');
+
+        return redirect()->route('checkin');
     }
 
-    public function clearActiveForThisStation(): void
+    // ✅ Quitar evento activo de “este puesto” (sesión)
+    public function clearActiveForThisStation()
     {
-        // ✅ Permiso específico para limpiar el evento del puesto
         Gate::authorize('eventos.activar_puesto');
 
-        if (!$this->station) {
-            session()->flash('ok', 'No hay puesto detectado.');
-            return;
-        }
-
-        $antes = (int) (
-            $this->station->active_event_id
-            ?? $this->station->active_evento_id
-            ?? 0
-        ) ?: null;
-
-        if (!$antes) {
-            session()->flash('ok', 'No hay evento activo para limpiar en este puesto.');
-            return;
-        }
-
-        // ✅ Limpiamos ambos campos por compatibilidad + metadata
-        $this->station->active_event_id = null;
-        $this->station->active_evento_id = null;
-        $this->station->activated_at = null;
-        $this->station->activated_by = null;
-        $this->station->save();
-
-        $this->activeEventId = null;
-        $this->currentEventTitle = null;
-
-        AuditLog::create([
-            'modulo' => 'stations',
-            'accion' => 'active_event_cleared',
-            'subject_type' => Station::class,
-            'subject_id' => $this->station->id,
-            'user_id' => auth()->id(),
-            'meta' => [
-                'ip' => $this->station->ip,
-                'active_event_antes' => $antes,
-                'active_event_despues' => null,
-            ],
-            'ip' => request()->ip(),
-            'user_agent' => request()->userAgent(),
-        ]);
+        session()->forget('active_event_id');
+        $this->syncFromSession();
 
         session()->flash('ok', 'Evento activo removido de este puesto.');
     }
 
-    private function setActiveEvent(int $eventoId): void
-    {
-        if (!$this->station) {
-            // Por seguridad, recargamos la estación si algo raro pasó
-            $this->loadStation();
-        }
-
-        $antes = (int) (
-            $this->station->active_event_id
-            ?? $this->station->active_evento_id
-            ?? 0
-        ) ?: null;
-
-        // ✅ Guardamos ambos campos (viejo y nuevo) + metadata
-        $this->station->active_event_id = $eventoId;
-        $this->station->active_evento_id = $eventoId; // nuevo campo
-        $this->station->activated_at = now();
-        $this->station->activated_by = auth()->id();
-        $this->station->save();
-
-        // (Recomendado) estación en sesión para todo el sistema
-        session(['station_id' => $this->station->id]);
-
-        $this->activeEventId = $eventoId;
-        $this->currentEventTitle = Evento::whereKey($eventoId)->value('titulo');
-
-        AuditLog::create([
-            'modulo' => 'stations',
-            'accion' => 'active_event_changed',
-            'subject_type' => Station::class,
-            'subject_id' => $this->station->id,
-            'user_id' => auth()->id(),
-            'meta' => [
-                'ip' => $this->station->ip,
-                'active_event_antes' => $antes,
-                'active_event_despues' => $eventoId,
-            ],
-            'ip' => request()->ip(),
-            'user_agent' => request()->userAgent(),
-        ]);
-    }
-
-    /**
-     * (Opcional) Mantengo tu toggle global por si aún lo quieres usar
-     * como "habilitar/deshabilitar" eventos en el sistema.
-     */
-    public function toggleActivo(int $id): void
+    // ✅ Habilitar/Deshabilitar (admin)
+    public function toggleActivo(int $eventoId)
     {
         Gate::authorize('eventos.editar');
 
-        $evento = Evento::findOrFail($id);
-
-        $antes = $evento->activo;
-
+        $evento = Evento::findOrFail($eventoId);
         $evento->activo = !$evento->activo;
         $evento->updated_by = auth()->id();
         $evento->save();
 
-        AuditLog::create([
-            'modulo' => 'eventos',
-            'accion' => 'toggled',
-            'subject_type' => Evento::class,
-            'subject_id' => $evento->id,
-            'user_id' => auth()->id(),
-            'meta' => [
-                'activo_antes' => $antes,
-                'activo_despues' => $evento->activo,
-            ],
-            'ip' => request()->ip(),
-            'user_agent' => request()->userAgent(),
-        ]);
-
         session()->flash('ok', 'Estado del evento actualizado.');
+
+        if ((int) ($this->activeEventId ?? 0) === (int) $evento->id && !(bool) $evento->activo) {
+            session()->forget('active_event_id');
+            $this->syncFromSession();
+        }
+    }
+
+    // =========================
+    // 🧹 ELIMINAR EVENTO (ADMIN)
+    // =========================
+
+    public function requestDeleteEvent(int $eventoId): void
+    {
+        // 🔒 Solo admin (o quien tenga este permiso)
+        Gate::authorize('eventos.editar');
+
+        $evento = Evento::findOrFail($eventoId);
+
+        $this->confirmDelete = true;
+        $this->deleteEventId = (int) $evento->id;
+        $this->deleteEventTitle = (string) $evento->titulo;
+    }
+
+    public function cancelDelete(): void
+    {
+        $this->confirmDelete = false;
+        $this->deleteEventId = null;
+        $this->deleteEventTitle = null;
+    }
+
+    public function confirmDeleteEvent()
+    {
+        // 🔒 Solo admin (o quien tenga este permiso)
+        Gate::authorize('eventos.editar');
+
+        if (!$this->deleteEventId) {
+            $this->cancelDelete();
+            return;
+        }
+
+        $eventoId = (int) $this->deleteEventId;
+
+        DB::transaction(function () use ($eventoId) {
+
+            // hijos primero
+            DB::table('representacion_miembros')->where('evento_id', $eventoId)->delete();
+            DB::table('representacion_grupos')->where('evento_id', $eventoId)->delete();
+            DB::table('registros_checkin')->where('evento_id', $eventoId)->delete();
+            DB::table('controles')->where('evento_id', $eventoId)->delete();
+            DB::table('evento_padron')->where('evento_id', $eventoId)->delete();
+
+            // evento al final
+            DB::table('eventos')->where('id', $eventoId)->delete();
+        });
+
+        // si el evento eliminado estaba activo en este puesto, limpiamos la sesión
+        if ((int) (session('active_event_id') ?? 0) === $eventoId) {
+            session()->forget('active_event_id');
+        }
+
+        $this->cancelDelete();
+        $this->syncFromSession();
+
+        session()->flash('ok', 'Evento eliminado completamente. Ya puedes crear uno nuevo.');
+        return redirect()->route('eventos.index');
     }
 
     public function render()
     {
-        Gate::authorize('eventos.ver');
-
         $eventos = Evento::query()
-            ->when(
-                !auth()->user()->can('eventos.editar'),
-                fn($q) => $q->where('activo', true)
-            )
-            ->when(
-                $this->buscar !== '',
-                fn($q) => $q->where('titulo', 'like', '%' . $this->buscar . '%')
-            )
-            ->orderByDesc('activo')
+            ->when($this->buscar !== '', function ($q) {
+                $q->where('titulo', 'like', '%' . $this->buscar . '%')
+                    ->orWhere('slug', 'like', '%' . $this->buscar . '%');
+            })
             ->orderByDesc('fecha_inicio')
             ->paginate(10);
 
@@ -265,6 +215,9 @@ class Index extends Component
             'currentEventTitle' => $this->currentEventTitle,
             'confirmChange' => $this->confirmChange,
             'pendingEventTitle' => $this->pendingEventTitle,
+            // 🧹 modal eliminar
+            'confirmDelete' => $this->confirmDelete,
+            'deleteEventTitle' => $this->deleteEventTitle,
         ])->layout('layouts.app');
     }
 }

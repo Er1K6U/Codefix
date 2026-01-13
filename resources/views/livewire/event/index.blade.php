@@ -58,7 +58,6 @@
                 </div>
             @endif
 
-            {{-- ✅ Estado del puesto (PC) + botón quitar --}}
             <div class="mt-3 flex flex-wrap items-center gap-2">
                 @if(!empty($currentEventTitle))
                     <div class="inline-flex items-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-2 text-sky-800">
@@ -68,7 +67,6 @@
                         </span>
                     </div>
 
-                    {{-- ✅ Quitar evento del puesto: operativo (ADMIN / OPERADOR / CLIENTE) --}}
                     @can('eventos.activar_puesto')
                         <button
                             wire:click="clearActiveForThisStation"
@@ -91,12 +89,14 @@
             </div>
         </div>
 
-        {{-- ✅ Nuevo evento solo ADMIN --}}
+        {{-- ✅ Modo evento único: Crear SOLO si NO hay eventos y SOLO ADMIN --}}
         @can('eventos.crear')
-            <a href="{{ route('eventos.crear') }}"
-                class="rounded-xl bg-[#0F3D4C] px-4 py-2 font-semibold text-white hover:opacity-90 transition">
-                + Nuevo evento
-            </a>
+            @if(\App\Domain\Event\Models\Evento::count() === 0)
+                <a href="{{ route('eventos.crear') }}"
+                   class="rounded-xl bg-[#0F3D4C] px-4 py-2 font-semibold text-white hover:opacity-90 transition">
+                    + Nuevo evento
+                </a>
+            @endif
         @endcan
     </div>
 
@@ -128,7 +128,6 @@
                         $globalEnabled = (bool) $evento->activo;
                     @endphp
 
-                    {{-- ✅ Resaltar fila si está activa en este puesto --}}
                     <tr class="border-t {{ $isActiveInThisStation ? 'bg-[#0F3D4C]/[0.04]' : '' }}"
                         wire:key="evento-{{ $evento->id }}">
                         <td class="px-4 py-3 font-medium">
@@ -143,7 +142,7 @@
 
                                 <div class="leading-tight">
                                     <div>{{ $evento->titulo }}</div>
-                                    <div class="text-xs text-gray-500">{{ $evento->slug }}</div>
+                                    {{-- slug oculto: ya no lo usamos en UI --}}
                                 </div>
                             </div>
                         </td>
@@ -154,7 +153,6 @@
 
                         <td class="px-4 py-3 text-center">
                             <div class="inline-flex items-center justify-center gap-2 flex-wrap">
-                                {{-- Badge Estado global --}}
                                 @if($globalEnabled)
                                     <span class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold
                                                      border-emerald-200 bg-emerald-50 text-emerald-700 shadow-sm">
@@ -169,7 +167,6 @@
                                     </span>
                                 @endif
 
-                                {{-- Badge Tiempo --}}
                                 @if($esHoy)
                                     <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold
                                                      border-sky-200 bg-sky-50 text-sky-700 shadow-sm">
@@ -187,7 +184,6 @@
                                     </span>
                                 @endif
 
-                                {{-- Badge "En este puesto" --}}
                                 @if($isActiveInThisStation)
                                     <span class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold
                                                      border-[#0F3D4C]/20 bg-[#0F3D4C]/5 text-[#0F3D4C] shadow-sm">
@@ -201,7 +197,6 @@
                         <td class="px-4 py-3 text-center">
                             <div class="flex items-center justify-center gap-2 flex-wrap">
 
-                                {{-- ✅ Operativo (ADMIN / OPERADOR / CLIENTE): Activar en este puesto --}}
                                 @can('eventos.activar_puesto')
                                     <button
                                         wire:click.prevent="activateForThisStation({{ $evento->id }})"
@@ -219,7 +214,6 @@
                                     </button>
                                 @endcan
 
-                                {{-- ✅ Admin-only: Editar / Habilitar / Deshabilitar --}}
                                 @can('eventos.editar')
                                     <a href="{{ route('eventos.editar', $evento->id) }}"
                                         class="rounded-lg border px-3 py-1.5 text-sm hover:bg-gray-50 transition">
@@ -235,6 +229,13 @@
                                         {{ $globalEnabled ? 'Deshabilitar' : 'Habilitar' }}
                                     </button>
                                 @endcan
+                                {{-- 🧹 Admin-only: Eliminar evento (borrado total) --}}
+                                <button
+                                    wire:click.prevent="requestDeleteEvent({{ $evento->id }})"
+                                    class="rounded-lg px-3 py-1.5 text-sm text-white bg-rose-600 hover:bg-rose-700 transition"
+                                >
+                                    Eliminar
+                                </button>
 
                             </div>
                         </td>
@@ -254,7 +255,6 @@
         {{ $eventos->links() }}
     </div>
 
-    {{-- ✅ MODAL confirmación cambio de evento en este puesto --}}
     @if(!empty($confirmChange))
         <div class="fixed inset-0 z-50 flex items-center justify-center">
             <div class="absolute inset-0 bg-black/40"></div>
@@ -281,6 +281,44 @@
                     <button wire:click="confirmChangeEvent"
                         class="rounded-xl bg-[#0F3D4C] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 transition">
                         Sí, cambiar evento
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+    {{-- 🧹 MODAL confirmación eliminar evento --}}
+    @if(!empty($confirmDelete))
+        <div class="fixed inset-0 z-50 flex items-center justify-center">
+            <div class="absolute inset-0 bg-black/40"></div>
+
+            <div class="relative w-full max-w-lg rounded-2xl bg-white shadow-2xl p-6">
+                <h3 class="text-lg font-black text-[#2E2E2E]">
+                    Eliminar evento (borrado total)
+                </h3>
+
+                <p class="mt-3 text-sm text-gray-700 leading-relaxed">
+                    Vas a eliminar el evento:
+                    <span class="font-black">{{ $deleteEventTitle }}</span>
+                    <br><br>
+                    Esto borrará también:
+                    <span class="font-semibold">padrón (base), controles, check-in y representación</span>.
+                    <br>
+                    Esta acción <span class="font-black text-rose-700">NO</span> se puede deshacer.
+                </p>
+
+                <div class="mt-6 flex items-center justify-end gap-2">
+                    <button
+                        wire:click="cancelDelete"
+                        class="rounded-xl border px-4 py-2 text-sm font-semibold hover:bg-gray-50 transition"
+                    >
+                        Cancelar
+                    </button>
+
+                    <button
+                        wire:click="confirmDeleteEvent"
+                        class="rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 transition"
+                    >
+                        Sí, eliminar todo
                     </button>
                 </div>
             </div>
