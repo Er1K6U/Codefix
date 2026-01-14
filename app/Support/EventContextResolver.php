@@ -4,7 +4,7 @@ namespace App\Support;
 
 use Illuminate\Support\Facades\DB;
 
-class EventContext
+class EventContextResolver
 {
     public function eventoId(): ?int
     {
