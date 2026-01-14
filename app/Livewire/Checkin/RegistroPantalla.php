@@ -1424,6 +1424,9 @@ class RegistroPantalla extends Component
                     'checked_in_at' => now(),
                     'checked_in_by_user_id' => auth()->id(),
                     'estado' => 'CHECKED_IN', // ✅ este estado lo vamos a usar para bloquear poderes
+                    // ✅ snapshots para quórum
+                    'coef_total_snapshot' => $this->coefTotal !== null ? (float) $this->coefTotal : null,
+                    'cabeza_inmueble_snapshot' => $this->inmuebleLabel ?: null,
                     'updated_at' => now(),
                 ]);
 

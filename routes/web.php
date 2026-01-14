@@ -7,6 +7,8 @@ use Livewire\Livewire;
 use App\Livewire\Event\Index as EventIndex;
 use App\Livewire\Event\Form as EventForm;
 use App\Livewire\Checkin\RegistroPantalla;
+use App\Livewire\Quorum\Show as QuorumShow;
+
 
 // ✅ Admin Usuarios
 use App\Livewire\Admin\Usuarios\Index as AdminUsuariosIndex;
@@ -66,6 +68,10 @@ Route::middleware(['auth', 'verified', 'usuario.activo', 'evento.contexto'])->gr
         ->middleware(['evento.activo'])
         ->name('checkin');
 
+    // Quorum (max)
+    Route::get('/quorum', QuorumShow::class)
+        ->middleware(['evento.activo'])
+        ->name('quorum.show');
     /*
     |--------------------------------------------------------------------------
     | Admin · Usuarios (SOLO ADMIN)

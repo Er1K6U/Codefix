@@ -9,6 +9,7 @@ use App\Models\AuditLog;
 use Livewire\WithFileUploads;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Artisan;
 
 class Form extends Component
 {
@@ -92,12 +93,10 @@ class Form extends Component
             $data['imagen'] = $path;
         }
 
-        // ⚠️ Importante:
-        // Ya NO guardamos excels en /imports con timestamp.
-        // Los guardamos por evento en: storage/app/eventos/{evento_id}/base_evento.xlsx y controles.xlsx
-        // y guardamos la ruta en DB (base_excel_path, controles_excel_path)
-
         if ($this->idEvento) {
+            // =========================
+            // EDITAR EVENTO
+            // =========================
             Gate::authorize('eventos.editar');
 
             $evento = Evento::findOrFail($this->idEvento);
@@ -118,7 +117,7 @@ class Form extends Component
             $evento->updated_by = auth()->id();
             $evento->save();
 
-            // Carpeta por evento
+            // Carpeta por evento (disco private)
             $dir = "eventos/{$evento->id}";
 
             // ✅ BASE Excel (si llega nuevo, borramos el anterior)
@@ -143,7 +142,6 @@ class Form extends Component
                 $this->controlesExcelPath = $stored;
             }
 
-            // Guardar cambios de rutas si hubo archivos
             if ($this->baseExcelFile || $this->controlesExcelFile) {
                 $evento->save();
             }
@@ -175,6 +173,9 @@ class Form extends Component
 
             session()->flash('ok', 'Evento actualizado correctamente.');
         } else {
+            // =========================
+            // CREAR EVENTO
+            // =========================
             Gate::authorize('eventos.crear');
 
             // Crear evento primero para obtener ID
@@ -203,6 +204,32 @@ class Form extends Component
                 $evento->save();
             }
 
+            // ✅ AUTO-IMPORT SOLO EN CREACIÓN (si hay archivos)
+            // Base: usa tu comando que selecciona el evento único
+            // Controles: import-excel explícito por ID
+            $importMsgs = [];
+
+            if (!empty($evento->base_excel_path)) {
+                $exit = Artisan::call('base:import', ['--wipe' => true]);
+                $out = trim(Artisan::output());
+                $importMsgs[] = $exit === 0 ? '✅ Base importada.' : '⚠️ Falló importación de Base.';
+                if ($out !== '') {
+                    $importMsgs[] = $out;
+                }
+            }
+
+            if (!empty($evento->controles_excel_path)) {
+                $exit = Artisan::call('controls:import-excel', [
+                    'evento_id' => (int) $evento->id,
+                    '--wipe' => true,
+                ]);
+                $out = trim(Artisan::output());
+                $importMsgs[] = $exit === 0 ? '✅ Controles importados.' : '⚠️ Falló importación de Controles.';
+                if ($out !== '') {
+                    $importMsgs[] = $out;
+                }
+            }
+
             AuditLog::create([
                 'modulo' => 'eventos',
                 'accion' => 'created',
@@ -219,13 +246,19 @@ class Form extends Component
                         'imagen' => $evento->imagen,
                         'base_excel_path' => $evento->base_excel_path ?? null,
                         'controles_excel_path' => $evento->controles_excel_path ?? null,
+                        'auto_import' => $importMsgs,
                     ],
                 ],
                 'ip' => request()->ip(),
                 'user_agent' => request()->userAgent(),
             ]);
 
-            session()->flash('ok', 'Evento creado correctamente.');
+            // Mensaje final (corto). Si quieres, luego lo pasamos a modal bonito.
+            if (!empty($importMsgs)) {
+                session()->flash('ok', "Evento creado. " . $importMsgs[0] . (isset($importMsgs[1]) ? " (ver log)" : ""));
+            } else {
+                session()->flash('ok', 'Evento creado correctamente.');
+            }
         }
 
         return redirect()->route('eventos.index');
