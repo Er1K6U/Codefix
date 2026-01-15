@@ -8,6 +8,7 @@ use App\Livewire\Event\Index as EventIndex;
 use App\Livewire\Event\Form as EventForm;
 use App\Livewire\Checkin\RegistroPantalla;
 use App\Livewire\Quorum\Show as QuorumShow;
+use App\Livewire\Controls\RetiroReingreso;
 
 
 // ✅ Admin Usuarios
@@ -67,6 +68,10 @@ Route::middleware(['auth', 'verified', 'usuario.activo', 'evento.contexto'])->gr
     Route::get('/checkin', RegistroPantalla::class)
         ->middleware(['evento.activo'])
         ->name('checkin');
+
+    // Retiro controles
+    Route::get('/controles/retiro', RetiroReingreso::class)
+        ->name('controles.retiro');
 
     // Quorum (max)
     Route::get('/quorum', QuorumShow::class)
