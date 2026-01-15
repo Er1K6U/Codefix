@@ -65,6 +65,39 @@
         </div>
     @endif
 
+    {{-- ✅ MODAL CONTROL / BLOQUEOS (usado para: control ocupado / poder bloqueado / etc.) --}}
+    @if($showControlModal)
+        <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-4">
+            <div class="w-full max-w-md rounded-3xl bg-white border border-gray-200 shadow-2xl p-7">
+                <div class="flex items-start gap-4">
+                    <div class="mt-1 w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center">
+                        <svg class="w-7 h-7 text-amber-700" viewBox="0 0 24 24" fill="none">
+                            <path d="M12 9v4m0 4h.01M10.29 3.86l-7.4 13.2A2 2 0 0 0 4.64 20h14.72a2 2 0 0 0 1.75-2.94l-7.4-13.2a2 2 0 0 0-3.42 0Z"
+                                  stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+
+                    <div class="flex-1">
+                        <h3 class="text-lg font-black text-gray-900">{{ $controlModalTitle ?? 'Atención' }}</h3>
+                        <p class="text-sm text-gray-600 mt-1">
+                            {{ $controlModalBody }}
+                        </p>
+
+                        <div class="mt-5 flex justify-end">
+                            <button
+                                type="button"
+                                wire:click="closeControlModal"
+                                class="px-5 py-2 rounded-xl bg-black text-white font-semibold hover:bg-black/90 transition"
+                            >
+                                Entendido
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
     {{-- ✅ FILA SUPERIOR: 2 columnas (Buscador a la derecha + Inmueble al lado) --}}
     <div class="grid lg:grid-cols-2 gap-6 items-start">
 
@@ -84,7 +117,7 @@
                             type="text"
                             wire:model.live="search"
                             placeholder="Ej: T3 3502 o 3502"
-                            @disabled($registroId && $this->hasUnsavedChanges())    
+                            @disabled($registroId && $this->hasPendingChanges())  
                             class="w-full rounded-xl border-gray-300 focus:ring-2 focus:ring-indigo-300 disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
                         />
 
@@ -101,9 +134,9 @@
                         @endif
                     </div>
 
-                    @if($registroId && $this->hasUnsavedChanges())
+                        @if($registroId && $this->hasPendingChanges())
                         <p class="text-xs text-amber-700 mt-2">
-                            Tienes cambios sin guardar. Guarda o descarta para buscar otro inmueble.
+                            Tienes cambios pendientes. Debes Guardar asistente para continuar.
                         </p>
                     @endif
                 </div>
@@ -464,6 +497,33 @@
             * El teléfono es obligatorio para poder cerrar el check-in.
         </div>
     </div>
+
+    {{-- ✅ MODAL: Guardar asistente obligatorio (cuando hay cambios pendientes) --}}
+    @if($confirmSaveRequired)
+        <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-4">
+            <div class="w-full max-w-md rounded-2xl bg-white border border-gray-200 shadow-2xl p-6">
+                <h3 class="text-lg font-black text-gray-900">Cambios pendientes</h3>
+                <p class="text-sm text-gray-600 mt-2">
+                    Hay cambios en poderes y/o control preparado. Debes <span class="font-semibold">Guardar asistente</span>
+                    antes de cambiar de inmueble o limpiar.
+                </p>
+
+                <div class="mt-5 flex justify-end gap-3">
+                    <button type="button"
+                        wire:click="$set('confirmSaveRequired', false)"
+                        class="px-4 py-2 rounded-xl border border-gray-300 hover:bg-gray-50 font-semibold">
+                        Cancelar
+                    </button>
+
+                    <button type="button"
+                        wire:click="saveAsistente"
+                        class="px-4 py-2 rounded-xl bg-black text-white font-semibold hover:bg-black/90">
+                        Guardar asistente
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
 
     {{-- Modal: cambios sin guardar --}}
     @if($confirmDiscard)
