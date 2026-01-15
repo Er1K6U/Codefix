@@ -84,7 +84,7 @@
                             type="text"
                             wire:model.live="search"
                             placeholder="Ej: T3 3502 o 3502"
-                            @disabled($registroId && $this->hasUnsavedChanges())    
+                            @disabled($registroId && $this->hasUnsavedChanges())
                             class="w-full rounded-xl border-gray-300 focus:ring-2 focus:ring-indigo-300 disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
                         />
 
@@ -488,4 +488,5 @@
             </div>
         </div>
     @endif
+
 </div>

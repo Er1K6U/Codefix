@@ -1463,12 +1463,6 @@ class RegistroPantalla extends Component
             || ($this->asistenteCorreo ?? '') !== ($this->asistenteCorreoOriginal ?? '');
     }
 
-    // ✅ Para usar en Blade como $hasUnsavedChanges (evita usar $this->... en el .blade)
-    public function getHasUnsavedChangesProperty(): bool
-    {
-        return $this->hasUnsavedChanges();
-    }
-
     public function requestClearSelection(): void
     {
         if ($this->hasUnsavedChanges()) {
