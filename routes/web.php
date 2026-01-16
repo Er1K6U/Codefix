@@ -77,6 +77,11 @@ Route::middleware(['auth', 'verified', 'usuario.activo', 'evento.contexto'])->gr
     Route::get('/quorum', QuorumShow::class)
         ->middleware(['evento.activo'])
         ->name('quorum.show');
+    // Base Turning
+    // Base Turning (SOLO ADMIN)
+    Route::get('/base-turning', \App\Livewire\BaseTurning\Index::class)
+        ->middleware(['evento.activo', 'role:ADMIN'])
+        ->name('base-turning.index');
     /*
     |--------------------------------------------------------------------------
     | Admin · Usuarios (SOLO ADMIN)

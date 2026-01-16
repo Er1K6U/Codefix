@@ -28,7 +28,9 @@
                     <x-nav-link :href="url('/quorum')" :active="request()->is('quorum')">
                         {{ __('Quórum') }}
                     </x-nav-link>
-
+                    <x-nav-link :href="route('base-turning.index')" :active="request()->routeIs('base-turning.index')">
+                        {{ __('Base Turning') }}
+                    </x-nav-link>
                     <x-nav-link :href="url('/controles/retiro')" :active="request()->is('controles/retiro')">
                         {{ __('Retiro/Controles') }}
                     </x-nav-link>
@@ -141,8 +143,17 @@
             <x-responsive-nav-link :href="route('checkin')" :active="request()->routeIs('checkin')">
                 {{ __('Check-in') }}
             </x-responsive-nav-link>
+            <x-responsive-nav-link :href="url('/quorum')" :active="request()->is('quorum')">
+                {{ __('Quórum') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('base-turning.index')"
+                :active="request()->routeIs('base-turning.index')">
+                {{ __('Base Turning') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="url('/controles/retiro')" :active="request()->is('controles/retiro')">
+                {{ __('Retiro/Controles') }}
+            </x-responsive-nav-link>
             @endrole
-
             @role('OPERADOR')
             <x-responsive-nav-link :href="route('eventos.index')" :active="request()->routeIs('eventos.*')">
                 {{ __('Eventos') }}
@@ -151,11 +162,21 @@
             <x-responsive-nav-link :href="route('checkin')" :active="request()->routeIs('checkin')">
                 {{ __('Check-in') }}
             </x-responsive-nav-link>
+            <x-responsive-nav-link :href="url('/quorum')" :active="request()->is('quorum')">
+                {{ __('Quórum') }}
+            </x-responsive-nav-link>
+
+            <x-responsive-nav-link :href="url('/controles/retiro')" :active="request()->is('controles/retiro')">
+                {{ __('Retiro/Controles') }}
+            </x-responsive-nav-link>
             @endrole
 
             @role('CLIENTE')
             <x-responsive-nav-link :href="route('checkin')" :active="request()->routeIs('checkin')">
                 {{ __('Check-in') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="url('/quorum')" :active="request()->is('quorum')">
+                {{ __('Quórum') }}
             </x-responsive-nav-link>
             @endrole
 
