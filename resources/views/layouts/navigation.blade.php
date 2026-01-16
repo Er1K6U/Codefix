@@ -31,6 +31,9 @@
                     <x-nav-link :href="route('base-turning.index')" :active="request()->routeIs('base-turning.index')">
                         {{ __('Base Turning') }}
                     </x-nav-link>
+                    <x-nav-link :href="route('informes.excel')">
+                        {{ __('Descargar informes') }}
+                    </x-nav-link>
                     <x-nav-link :href="url('/controles/retiro')" :active="request()->is('controles/retiro')">
                         {{ __('Retiro/Controles') }}
                     </x-nav-link>
@@ -149,6 +152,9 @@
             <x-responsive-nav-link :href="route('base-turning.index')"
                 :active="request()->routeIs('base-turning.index')">
                 {{ __('Base Turning') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('informes.excel')">
+                {{ __('Descargar informes') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="url('/controles/retiro')" :active="request()->is('controles/retiro')">
                 {{ __('Retiro/Controles') }}

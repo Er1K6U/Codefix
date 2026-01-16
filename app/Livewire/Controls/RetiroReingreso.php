@@ -105,7 +105,6 @@ class RetiroReingreso extends Component
                 }
 
                 if (($registro->estado ?? null) !== 'CHECKED_IN') {
-                    // Si ya estaba retirado, no hacemos nada (idempotente)
                     $this->openModal('Ya retirado', "El control #{$num} ya está marcado como retirado (estado actual: {$registro->estado}).", 'info');
                     return;
                 }
@@ -114,6 +113,8 @@ class RetiroReingreso extends Component
                     ->where('id', $registro->id)
                     ->update([
                         'estado' => 'RETIRADO',
+                        'retirado_at' => now(),
+                        'retirado_by_user_id' => Auth::id(),
                         'updated_at' => now(),
                     ]);
 
@@ -211,9 +212,12 @@ class RetiroReingreso extends Component
                     ->where('id', $registro->id)
                     ->update([
                         'estado' => 'CHECKED_IN',
-                        // lo marcamos como “reingresó” ahora
-                        'checked_in_at' => now(),
+                        'checked_in_at' => now(), // último ingreso
                         'checked_in_by_user_id' => Auth::id(),
+
+                        'reingreso_at' => now(),
+                        'reingreso_by_user_id' => Auth::id(),
+
                         'updated_at' => now(),
                     ]);
 

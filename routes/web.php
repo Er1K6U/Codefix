@@ -9,6 +9,8 @@ use App\Livewire\Event\Form as EventForm;
 use App\Livewire\Checkin\RegistroPantalla;
 use App\Livewire\Quorum\Show as QuorumShow;
 use App\Livewire\Controls\RetiroReingreso;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\InformeAsambleaExport;
 
 
 // ✅ Admin Usuarios
@@ -82,6 +84,21 @@ Route::middleware(['auth', 'verified', 'usuario.activo', 'evento.contexto'])->gr
     Route::get('/base-turning', \App\Livewire\BaseTurning\Index::class)
         ->middleware(['evento.activo', 'role:ADMIN'])
         ->name('base-turning.index');
+
+    // Informes Excel (SOLO ADMIN)
+    Route::get('/informes/excel', function () {
+        $eid = app(\App\Support\EventContext::class)->eventoId();
+
+        $file = 'Coefix_Informe_Asamblea_Evento_' . $eid . '_' . now()->format('Ymd_His') . '.xlsx';
+
+        return Excel::download(
+            new InformeAsambleaExport($eid),
+            $file
+        );
+    })
+        ->middleware(['evento.activo', 'role:ADMIN'])
+        ->name('informes.excel');
+
     /*
     |--------------------------------------------------------------------------
     | Admin · Usuarios (SOLO ADMIN)
