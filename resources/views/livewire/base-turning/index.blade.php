@@ -25,8 +25,8 @@
             <table class="min-w-full text-sm">
                 <thead class="bg-gray-50 border-b">
                     <tr class="text-left text-gray-700">
-                        <th class="px-4 py-3 font-bold"># Control</th>
                         <th class="px-4 py-3 font-bold">Código</th>
+                        <th class="px-4 py-3 font-bold"># Control</th>
                         <th class="px-4 py-3 font-bold">Inmueble cabeza</th>
                         <th class="px-4 py-3 font-bold">Propietario</th>
                         <th class="px-4 py-3 font-bold">Coef</th>
@@ -36,15 +36,15 @@
                 <tbody>
                     @forelse($rows as $r)
                         <tr class="border-b last:border-b-0">
-                            <td class="px-4 py-3 font-semibold text-gray-800">{{ $r['control_numero'] }}</td>
                             <td class="px-4 py-3 text-gray-800">{{ $r['codigo'] }}</td>
+                            <td class="px-4 py-3 font-semibold text-gray-800">{{ $r['control_numero'] }}</td>
                             <td class="px-4 py-3 text-gray-800">{{ $r['inmueble'] }}</td>
                             <td class="px-4 py-3 text-gray-800">{{ $r['propietario'] }}</td>
                             <td class="px-4 py-3 font-mono text-gray-900">{{ $r['coef'] }}</td>
                             <td class="px-4 py-3">
                                 <span
                                     class="px-2 py-1 rounded-lg text-xs font-bold
-                                                        {{ $r['estado'] === 'CHECKED_IN' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800' }}">
+                                                                {{ $r['estado'] === 'CHECKED_IN' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800' }}">
                                     {{ $r['estado'] }}
                                 </span>
                             </td>

@@ -23,6 +23,8 @@ class RetiroReingreso extends Component
     public string $modalType = 'success'; // success | error | info
     public string $modalTitle = '';
     public string $modalBody = '';
+    public string $focusBackTo = 'retiroNumero'; // retiroNumero | reingresoNumero
+
 
     /**
      * Sincroniza eventoId con el contexto del puesto (Station -> evento activo)
@@ -57,6 +59,7 @@ class RetiroReingreso extends Component
     {
         $this->syncEventoFromContext();
         $eid = (int) ($this->eventoId ?? 0);
+        $this->focusBackTo = 'retiroNumero';
 
         $numRaw = trim((string) $this->retiroNumero);
         $num = ctype_digit($numRaw) ? (int) $numRaw : 0;
@@ -152,6 +155,7 @@ class RetiroReingreso extends Component
     {
         $this->syncEventoFromContext();
         $eid = (int) ($this->eventoId ?? 0);
+        $this->focusBackTo = 'reingresoNumero';
 
         $numRaw = trim((string) $this->reingresoNumero);
         $num = ctype_digit($numRaw) ? (int) $numRaw : 0;
@@ -262,6 +266,8 @@ class RetiroReingreso extends Component
         $this->modalTitle = '';
         $this->modalBody = '';
         $this->modalType = 'success';
+
+        $this->dispatch('focus-field', id: $this->focusBackTo);
     }
 
     public function render()
