@@ -30,103 +30,181 @@
             @endif
         </div>
 
-        {{-- KPIs --}}
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-            @foreach ([
-                ['Quórum actual', $quorumActual, '#0F3D4C'],
-                ['Máximo alcanzado', $quorumMax, '#2E2E2E'],
-                ['Retirado', $quorumRetirado, '#d32f57']
-            ] as [$label, $value, $color])
-                <div class="bg-white/80 backdrop-blur-md rounded-2xl shadow-xl border border-gray-200 p-6">
-                    <p class="text-xs font-semibold text-gray-600">{{ $label }}</p>
-                    <p class="mt-2 text-3xl font-black" style="color: {{ $color }}">
-                        {{ number_format($value, 2) }}%
-                    </p>
-                    @if($label === 'Retirado')
-                        <p class="mt-1 text-[11px] text-gray-500">(MVP: Máximo − Actual)</p>
-                    @endif
-                </div>
-            @endforeach
-        </div>
+        {{-- LAYOUT: izquierda KPIs+barra / derecha feed apilado --}}
+        <div class="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6">
 
-        {{-- Barra gigante --}}
-        <div class="bg-white/85 backdrop-blur-md rounded-3xl shadow-2xl border border-gray-200 p-8">
-            <div class="flex items-end justify-between gap-4">
-                <div>
-                    <p class="text-sm font-semibold text-gray-600">Progreso</p>
-                    <p class="text-5xl font-black text-[#0F3D4C] leading-none">
-                        {{ number_format($quorumActual, 2) }}%
-                    </p>
-                </div>
+            {{-- IZQUIERDA --}}
+            <div class="space-y-6">
 
-                <div class="text-right">
-                    <p class="text-xs text-gray-500">Actualiza automático</p>
-                    <p class="text-xs text-gray-500">cada 1.5s</p>
-                </div>
-            </div>
+                {{-- KPIs --}}
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    @foreach ([
+                        ['Controles activos', (int)($controlesActivos ?? 0), '#0F3D4C', 'count'],
+                        ['Máximo alcanzado', (float)$quorumMax, '#2E2E2E', 'pct'],
+                        ['Retirado', (float)$quorumRetirado, '#d32f57', 'pct'],
+                    ] as [$label, $value, $color, $type])
+                        <div class="bg-white/80 backdrop-blur-md rounded-2xl shadow-xl border border-gray-200 p-6">
+                            <p class="text-xs font-semibold text-gray-600">{{ $label }}</p>
 
-            @php
-                $pct = max(0, min(100, (float) $quorumActual));
-                $glow = 0.6 + ($pct / 100) * 0.4; // 0.6 -> 1.0
-            @endphp
+                            <p class="mt-2 text-3xl font-black" style="color: {{ $color }}">
+                                @if($type === 'pct')
+                                    {{ number_format($value, 2) }}%
+                                @else
+                                    {{ number_format($value, 0) }}
+                                @endif
+                            </p>
 
-            <div class="mt-6">
-                <div class="h-7 rounded-full bg-[#E6E8EB] overflow-hidden border border-gray-300 shadow-inner">
-                    <div class="h-full transition-all duration-700"
-                         style="
-                            width: {{ $pct }}%;
-                            background: linear-gradient(90deg, #0F3D4C 0%, #4CAF50 55%, #2E2E2E 100%);
-                            filter: saturate(1.05) brightness({{ $glow }});
-                         ">
-                    </div>
-                </div>
-
-                <div class="mt-4 flex justify-between text-xs text-gray-600">
-                    <span>0%</span>
-                    <span>100%</span>
-                </div>
-            </div>
-        </div>
-
-    </div>
-
-    {{-- MINI FEED “Bienvenido” (derecha, apilado, se desvanece) --}}
-    @if(!empty($ultimosLlegados))
-        <style>
-            @keyframes quorumToastFade {
-                0%   { opacity: 0; transform: translateX(8px) translateY(-2px); }
-                10%  { opacity: 1; transform: translateX(0) translateY(0); }
-                75%  { opacity: 1; transform: translateX(0) translateY(0); }
-                100% { opacity: 0; transform: translateX(10px) translateY(2px); }
-            }
-            .quorum-toast {
-                animation: quorumToastFade 10s ease-in-out forwards;
-            }
-        </style>
-
-        <div class="fixed right-6 top-28 z-50 w-[320px] space-y-3">
-            @foreach($ultimosLlegados as $idx => $item)
-                <div class="quorum-toast bg-white/85 backdrop-blur-md border border-gray-200 shadow-xl rounded-2xl p-4">
-                    <div class="flex items-start gap-3">
-                        <div class="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center border border-gray-200">
-                            {{-- icono simple --}}
-                            <svg viewBox="0 0 24 24" class="w-5 h-5 text-gray-700" fill="currentColor">
-                                <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm0 2c-4 0-7 2-7 4v1h14v-1c0-2-3-4-7-4Z"/>
-                            </svg>
+                            @if($label === 'Retirado')
+                                <p class="mt-1 text-[11px] text-gray-s
+                                    text-gray-500">(Suma de registros en estado RETIRADO)</p>
+                            @endif
                         </div>
-                        <div class="min-w-0">
-                            <p class="text-[11px] font-semibold text-gray-500">Bienvenido</p>
-                            <p class="text-sm font-black text-[#2E2E2E] truncate">
-                                Inmueble {{ $item['label'] ?? '—' }}
+                    @endforeach
+                </div>
+
+                {{-- Barra gigante --}}
+                <div class="bg-white/85 backdrop-blur-md rounded-3xl shadow-2xl border border-gray-200 p-8">
+                    <div class="flex items-end justify-between gap-4">
+                        <div>
+                            <p class="text-sm font-semibold text-gray-600">Progreso</p>
+                            <p class="text-5xl font-black text-[#0F3D4C] leading-none">
+                                {{ number_format((float)$quorumActual, 2) }}%
                             </p>
                         </div>
-                        <div class="ml-auto text-[11px] text-gray-400 font-semibold">
-                            #{{ $idx + 1 }}
+
+                        <div class="text-right">
+                            <p class="text-xs text-gray-500">Actualiza automático</p>
+                            <p class="text-xs text-gray-500">cada 1.5s</p>
+                        </div>
+                    </div>
+
+                    @php
+                        $pct = max(0, min(100, (float) $quorumActual));
+                        $glow = 0.6 + ($pct / 100) * 0.4; // 0.6 -> 1.0
+                    @endphp
+
+                    <div class="mt-6">
+                        <div class="h-7 rounded-full bg-[#E6E8EB] overflow-hidden border border-gray-300 shadow-inner">
+                            <div class="h-full transition-all duration-700"
+                                 style="
+                                    width: {{ $pct }}%;
+                                    background: linear-gradient(90deg, #0F3D4C 0%, #4CAF50 55%, #2E2E2E 100%);
+                                    filter: saturate(1.05) brightness({{ $glow }});
+                                 ">
+                            </div>
+                        </div>
+
+                        <div class="mt-4 flex justify-between text-xs text-gray-600">
+                            <span>0%</span>
+                            <span>100%</span>
                         </div>
                     </div>
                 </div>
-            @endforeach
-        </div>
-    @endif
 
+            </div>
+
+            {{-- DERECHA: Feed apilado (máx 10) --}}
+            <div class="lg:pt-2">
+                <div class="sticky top-28">
+                    <div class="flex items-end justify-between mb-3">
+                        <div>
+                            <p class="text-xs font-semibold text-gray-600">Llegadas</p>
+                            <p class="text-lg font-black text-[#2E2E2E] leading-tight">Bienvenido</p>
+                        </div>
+                        <p class="text-[11px] text-gray-500">en tiempo real</p>
+                    </div>
+
+                    <style>
+                        @keyframes quorumToastIn {
+                            0% { opacity: 0; transform: translateX(10px) translateY(-4px); }
+                            100% { opacity: 1; transform: translateX(0) translateY(0); }
+                        }
+                        .toast-in { animation: quorumToastIn .25s ease-out both; }
+
+                        /* Fondo animado MUY sutil (corporativo) para la card #1 */
+                        @keyframes softCorporateShift {
+                            0%   { background-position: 0% 50%; }
+                            50%  { background-position: 100% 50%; }
+                            100% { background-position: 0% 50%; }
+                        }
+                        .toast-featured {
+                            background: linear-gradient(120deg,
+                                rgba(15,61,76,0.10),
+                                rgba(76,175,80,0.10),
+                                rgba(15,61,76,0.08)
+                            );
+                            background-size: 200% 200%;
+                            animation: softCorporateShift 6s ease-in-out infinite;
+                            border: 1px solid rgba(15,61,76,0.22);
+                            box-shadow:
+                                0 18px 35px rgba(0,0,0,0.10),
+                                0 0 0 4px rgba(76,175,80,0.08);
+                        }
+
+                        .toast-normal {
+                            background: rgba(255,255,255,0.85);
+                            border: 1px solid rgba(229,231,235,1);
+                            box-shadow: 0 12px 26px rgba(0,0,0,0.10);
+                        }
+                    </style>
+
+                    <div class="space-y-3">
+                        @forelse($ultimosLlegados as $idx => $item)
+                            @php
+                                $isNew = ($idx === 0);
+                            @endphp
+
+                            <div
+                                class="{{ $isNew ? 'toast-in toast-featured' : 'toast-normal' }}
+                                       backdrop-blur-md rounded-2xl p-4 transition-all duration-300"
+                                style="{{ $isNew ? 'transform: scale(1.03);' : '' }}"
+                                wire:key="quorum-toast-{{ $idx }}-{{ $item['label'] ?? 'x' }}"
+                            >
+                                <div class="flex items-start gap-3">
+                                    <div class="{{ $isNew ? 'w-12 h-12' : 'w-11 h-11' }}
+                                                rounded-2xl flex items-center justify-center border"
+                                         style="{{ $isNew
+                                            ? 'background: rgba(255,255,255,0.75); border-color: rgba(15,61,76,0.22);'
+                                            : 'background: rgba(243,244,246,1); border-color: rgba(229,231,235,1);'
+                                         }}"
+                                    >
+                                        <svg viewBox="0 0 24 24"
+                                             class="{{ $isNew ? 'w-6 h-6' : 'w-5 h-5' }}"
+                                             style="{{ $isNew ? 'color: #0F3D4C;' : 'color: #374151;' }}"
+                                             fill="currentColor">
+                                            <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm0 2c-4 0-7 2-7 4v1h14v-1c0-2-3-4-7-4Z"/>
+                                        </svg>
+                                    </div>
+
+                                    <div class="min-w-0 flex-1">
+                                        <p class="{{ $isNew ? 'text-base' : 'text-sm' }} font-black"
+                                           style="color:#0F3D4C;">
+                                            Bienvenido
+                                        </p>
+
+                                        <p class="{{ $isNew ? 'text-lg' : 'text-base' }} font-black text-[#2E2E2E] truncate">
+                                            Inmueble {{ $item['label'] ?? '—' }}
+                                        </p>
+
+                                        @if($isNew)
+                                            <p class="mt-1 text-[11px] font-semibold text-gray-600">
+                                                Registro reciente
+                                            </p>
+                                        @endif
+                                    </div>
+
+                                    {{-- ❌ Quitamos #1 #2 etc. (no hay nada acá) --}}
+                                </div>
+                            </div>
+                        @empty
+                            <div class="bg-white/70 border border-gray-200 rounded-2xl p-4 text-sm text-gray-600">
+                                Aún no hay llegadas registradas.
+                            </div>
+                        @endforelse
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
 </div>
