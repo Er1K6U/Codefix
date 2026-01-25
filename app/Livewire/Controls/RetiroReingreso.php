@@ -17,13 +17,31 @@ class RetiroReingreso extends Component
     // ===== Inputs =====
     public ?string $retiroNumero = null;
     public ?string $reingresoNumero = null;
+    public ?string $reemplazoNumeroActual = null;
+    public ?string $reemplazoNumeroNuevo = null;
+
 
     // ===== UI / Modal =====
     public bool $modalOpen = false;
     public string $modalType = 'success'; // success | error | info
     public string $modalTitle = '';
     public string $modalBody = '';
-    public string $focusBackTo = 'retiroNumero'; // retiroNumero | reingresoNumero
+    public string $focusBackTo = 'retiroNumero';
+    // ===== Info control actual (reemplazo) =====
+    public ?string $reemplazoInfoNombre = null;
+    public ?string $reemplazoInfoTelefono = null;
+    public ?string $reemplazoInfoInmueble = null;
+    public ?string $reemplazoInfoEstadoRegistro = null;
+    public ?string $reemplazoInfoEstadoControl = null;
+    public ?int $reemplazoRegistroId = null;
+    public ?int $reemplazoControlId = null;
+    // ===== Info control nuevo (reemplazo) =====
+    public ?string $reemplazoNuevoEstadoControl = null;
+    public ?string $reemplazoNuevoSerial = null;
+    public ?int $reemplazoNuevoControlId = null;
+    public bool $reemplazoNuevoOk = false;
+
+    // retiroNumero | reingresoNumero
 
 
     /**
@@ -249,6 +267,179 @@ class RetiroReingreso extends Component
         } finally {
             $this->reingresoNumero = null;
         }
+    }
+
+    // =========================================================
+    //  BUSCAR CONTROL ACTUAL (solo lectura para mostrar dueño)
+    // =========================================================
+    public function buscarControlActual(): void
+    {
+        $this->syncEventoFromContext();
+        $eid = (int) ($this->eventoId ?? 0);
+
+        // reset info previa
+        $this->reemplazoInfoNombre = null;
+        $this->reemplazoInfoTelefono = null;
+        $this->reemplazoInfoInmueble = null;
+        $this->reemplazoInfoEstadoRegistro = null;
+        $this->reemplazoInfoEstadoControl = null;
+        $this->reemplazoRegistroId = null;
+        $this->reemplazoControlId = null;
+
+        $numRaw = trim((string) $this->reemplazoNumeroActual);
+        $num = ctype_digit($numRaw) ? (int) $numRaw : 0;
+
+        if ($eid <= 0) {
+            $this->openModal('Sin evento activo', 'No hay un evento activo en el contexto del puesto.', 'error');
+            return;
+        }
+
+        if ($num <= 0) {
+            $this->openModal('Número inválido', 'Digita un número de control válido.', 'error');
+            return;
+        }
+
+        $control = DB::table('controles')
+            ->where('evento_id', $eid)
+            ->where('numero', $num)
+            ->first();
+
+        if (!$control) {
+            $this->openModal('No existe', "No encontré el control #{$num} en este evento.", 'error');
+            return;
+        }
+
+        // Tomamos el último registro asociado a ese control (como haces en retirar/reingresar)
+        $registro = DB::table('registros_checkin')
+            ->where('evento_id', $eid)
+            ->where(function ($q) use ($control, $num) {
+                $q->where('control_id', $control->id)
+                    ->orWhere('control_numero_snapshot', $num);
+            })
+            ->orderByDesc('checked_in_at')
+            ->first();
+
+        if (!$registro) {
+            $this->openModal('Sin historial', "El control #{$num} existe, pero no encontré registro de check-in asociado.", 'error');
+            return;
+        }
+
+        // Guardamos info para mostrar en UI
+        $this->reemplazoControlId = (int) $control->id;
+        $this->reemplazoRegistroId = (int) $registro->id;
+
+        $this->reemplazoInfoNombre = $registro->asistente_nombre ?? '—';
+        $this->reemplazoInfoTelefono = $registro->asistente_telefono ?? '—';
+        $this->reemplazoInfoInmueble = (string) ($registro->cabeza_inmueble_snapshot ?? $registro->inmueble_base_id ?? '—');
+
+        $this->reemplazoInfoEstadoRegistro = (string) ($registro->estado ?? '—');
+        $this->reemplazoInfoEstadoControl = (string) ($control->estado ?? '—');
+
+        // Deja listo el foco en el nuevo control
+        $this->dispatch('focus-field', id: 'reemplazoNumeroNuevo');
+    }
+
+    // =========================================================
+    //  BUSCAR CONTROL NUEVO (solo lectura para validar LIBRE)
+    // =========================================================
+    public function buscarControlNuevo(): void
+    {
+        $this->syncEventoFromContext();
+        $eid = (int) ($this->eventoId ?? 0);
+
+        // reset info previo del nuevo
+        $this->reemplazoNuevoEstadoControl = null;
+        $this->reemplazoNuevoSerial = null;
+        $this->reemplazoNuevoControlId = null;
+        $this->reemplazoNuevoOk = false;
+
+        $numRaw = trim((string) $this->reemplazoNumeroNuevo);
+        $num = ctype_digit($numRaw) ? (int) $numRaw : 0;
+
+        if ($eid <= 0) {
+            $this->openModal('Sin evento activo', 'No hay un evento activo en el contexto del puesto.', 'error');
+            return;
+        }
+
+        if ($num <= 0) {
+            $this->openModal('Número inválido', 'Digita un número de control válido.', 'error');
+            return;
+        }
+
+        if ($this->reemplazoRegistroId === null) {
+            $this->openModal('Falta control actual', 'Primero digita el control actual y presiona Enter para cargar el dueño.', 'info');
+            $this->dispatch('focus-field', id: 'reemplazoNumeroActual');
+            return;
+        }
+
+        $control = DB::table('controles')
+            ->where('evento_id', $eid)
+            ->where('numero', $num)
+            ->first();
+
+        if (!$control) {
+            $this->openModal('No existe', "No encontré el nuevo control #{$num} en este evento.", 'error');
+            return;
+        }
+
+        // Guardamos info para UI
+        $this->reemplazoNuevoControlId = (int) $control->id;
+        $this->reemplazoNuevoEstadoControl = (string) ($control->estado ?? '—');
+        $this->reemplazoNuevoSerial = (string) ($control->serial ?? '—');
+
+        if (($control->estado ?? null) !== 'LIBRE') {
+            $this->reemplazoNuevoOk = false;
+            $this->openModal(
+                'Nuevo control no disponible',
+                "El control #{$num} está en estado '{$control->estado}'. Debe estar LIBRE para poder reemplazar.",
+                'error'
+            );
+            return;
+        }
+
+        $this->reemplazoNuevoOk = true;
+
+        // Dejamos listo para que el operador solo oprima el botón
+        $this->dispatch('focus-field', id: 'btnReemplazarControl');
+    }
+
+    // =========================================================
+    //  REEMPLAZAR CONTROL (solo validaciones por ahora)
+    // =========================================================
+    public function reemplazarControl(): void
+    {
+        $this->syncEventoFromContext();
+
+        $actualRaw = trim((string) $this->reemplazoNumeroActual);
+        $nuevoRaw = trim((string) $this->reemplazoNumeroNuevo);
+
+        $actual = ctype_digit($actualRaw) ? (int) $actualRaw : 0;
+        $nuevo = ctype_digit($nuevoRaw) ? (int) $nuevoRaw : 0;
+
+        if ($actual <= 0 || $nuevo <= 0) {
+            $this->openModal(
+                'Datos inválidos',
+                'Debes digitar un número válido para el control actual y el nuevo.',
+                'error'
+            );
+            return;
+        }
+
+        if ($actual === $nuevo) {
+            $this->openModal(
+                'Controles iguales',
+                'El control actual y el nuevo no pueden ser el mismo.',
+                'error'
+            );
+            return;
+        }
+
+        // Por ahora solo confirmamos intención (no DB aún)
+        $this->openModal(
+            'Confirmar reemplazo',
+            "Se va a reemplazar el control #{$actual} por el control #{$nuevo}.",
+            'info'
+        );
     }
 
     // ===== Modal helpers =====

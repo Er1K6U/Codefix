@@ -8,14 +8,14 @@
             <div class="w-full max-w-md rounded-3xl bg-white border border-gray-200 shadow-2xl p-7">
                 <div class="flex items-start gap-4">
                     <div class="mt-1 w-12 h-12 rounded-2xl flex items-center justify-center
-                                                                    {{ $modalType === 'success' ? 'bg-emerald-50 border border-emerald-200' : ($modalType === 'info' ? 'bg-sky-50 border border-sky-200' : 'bg-red-50 border border-red-200') }}
-                                                            @if($modalType === 'success')
-                                                                                                                                                                                                                                                                                        <svg class="
-                                                                w-7 h-7 text-emerald-600" viewBox="0 0 24 24" fill="none">
-                                                                <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"
-                                                                    stroke-linejoin="round" />
-                                                                </svg>
-                                                            @elseif($modalType === 'info')
+                                                                                            {{ $modalType === 'success' ? 'bg-emerald-50 border border-emerald-200' : ($modalType === 'info' ? 'bg-sky-50 border border-sky-200' : 'bg-red-50 border border-red-200') }}
+                                                                                    @if($modalType === 'success')
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    <svg class="
+                                                                                        w-7 h-7 text-emerald-600" viewBox="0 0 24 24" fill="none">
+                                                                                        <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"
+                                                                                            stroke-linejoin="round" />
+                                                                                        </svg>
+                                                                                    @elseif($modalType === 'info')
                             <svg class="w-7 h-7 text-sky-600" viewBox="0 0 24 24" fill="none">
                                 <path d="M12 8h.01M11 12h1v4h1" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
                                     stroke-linejoin="round" />
@@ -109,7 +109,7 @@
             <div>
                 <label class="text-sm font-semibold text-gray-700">Control actual</label>
                 <input id="reemplazoNumeroActual" type="text" wire:model.defer="reemplazoNumeroActual"
-                    placeholder="Ej: 27"
+                    wire:keydown.enter.prevent="buscarControlActual" placeholder="Ej: 27"
                     class="mt-1 w-full rounded-xl border-gray-300 focus:ring-2 focus:ring-amber-200" />
                 <div class="mt-2 text-xs text-gray-500">
                     Digita el número del control que ya está entregado.
@@ -119,7 +119,7 @@
             <div>
                 <label class="text-sm font-semibold text-gray-700">Nuevo control</label>
                 <input id="reemplazoNumeroNuevo" type="text" wire:model.defer="reemplazoNumeroNuevo"
-                    placeholder="Ej: 105"
+                    wire:keydown.enter.prevent="buscarControlNuevo" placeholder="Ej: 105"
                     class="mt-1 w-full rounded-xl border-gray-300 focus:ring-2 focus:ring-amber-200" />
                 <div class="mt-2 text-xs text-gray-500">
                     Digita el número del control que vas a entregar.
@@ -127,8 +127,49 @@
             </div>
         </div>
 
+        @if($reemplazoRegistroId)
+            <div class="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                <div class="text-sm font-black text-gray-900">Control actual: información</div>
+                <div class="mt-2 grid md:grid-cols-2 gap-3 text-sm text-gray-700">
+                    <div><span class="font-semibold">Asistente:</span> {{ $reemplazoInfoNombre }}</div>
+                    <div><span class="font-semibold">Teléfono:</span> {{ $reemplazoInfoTelefono }}</div>
+                    <div><span class="font-semibold">Inmueble/Grupo:</span> {{ $reemplazoInfoInmueble }}</div>
+                    <div><span class="font-semibold">Estado registro:</span> {{ $reemplazoInfoEstadoRegistro }}</div>
+                    <div><span class="font-semibold">Estado control:</span> {{ $reemplazoInfoEstadoControl }}</div>
+                    <div class="text-xs text-gray-600">
+                        Ahora digita el <span class="font-semibold">nuevo control</span> y luego presiona <span
+                            class="font-semibold">Reemplazar</span>.
+                    </div>
+                </div>
+            </div>
+        @endif
+
+        @if($reemplazoNumeroNuevo)
+            <div
+                class="mt-3 rounded-2xl border p-4
+                                    {{ $reemplazoNuevoOk ? 'border-emerald-200 bg-emerald-50' : 'border-gray-200 bg-gray-50' }}">
+                <div class="text-sm font-black text-gray-900">Nuevo control: validación</div>
+
+                <div class="mt-2 grid md:grid-cols-2 gap-3 text-sm text-gray-700">
+                    <div><span class="font-semibold">Estado:</span> {{ $reemplazoNuevoEstadoControl ?? '—' }}</div>
+                    <div><span class="font-semibold">Serial:</span> {{ $reemplazoNuevoSerial ?? '—' }}</div>
+
+                    @if($reemplazoNuevoOk)
+                        <div class="md:col-span-2 text-sm text-emerald-700 font-semibold">
+                            ✅ Listo: puedes oprimir “Reemplazar”.
+                        </div>
+                    @else
+                        <div class="md:col-span-2 text-xs text-gray-600">
+                            Presiona <span class="font-semibold">Enter</span> para validar el nuevo control (debe estar LIBRE).
+                        </div>
+                    @endif
+                </div>
+            </div>
+        @endif
+
+
         <div class="mt-5 flex justify-end">
-            <button type="button" wire:click="reemplazarControl"
+            <button id="btnReemplazarControl" type="button" wire:click="reemplazarControl"
                 class="px-5 py-2 rounded-xl bg-amber-600 text-white font-semibold hover:bg-amber-700 transition">
                 Reemplazar
             </button>
