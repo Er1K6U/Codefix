@@ -145,7 +145,7 @@ class RetiroReingreso extends Component
                     ->where('id', $registro->id)
                     ->update([
                         'estado' => 'RETIRADO',
-                        'retirado_at' => now(),
+                        'retirado_at' => max(now(), $registro->checked_in_at ?? now()),
                         'retirado_by_user_id' => Auth::id(),
                         'updated_at' => now(),
                     ]);
@@ -242,17 +242,18 @@ class RetiroReingreso extends Component
                     return;
                 }
 
+                $now = now();
+
                 DB::table('registros_checkin')
                     ->where('id', $registro->id)
                     ->update([
                         'estado' => 'CHECKED_IN',
-                        'checked_in_at' => now(), // último ingreso
-                        'checked_in_by_user_id' => Auth::id(),
 
-                        'reingreso_at' => now(),
+                        // ✅ NO tocar checked_in_at aquí (eso evita el retiro < checkin)
+                        'reingreso_at' => $now,
                         'reingreso_by_user_id' => Auth::id(),
 
-                        'updated_at' => now(),
+                        'updated_at' => $now,
                     ]);
 
                 DB::table('controles')

@@ -112,8 +112,8 @@ class Index extends Component
 
             // TSV (4 cols + propietario ahora serán 5 cols)
             $lines[] = implode("\t", [
-                $row['control_numero'],
                 $row['codigo'],
+                $row['control_numero'],
                 $row['inmueble'],
                 $row['propietario'],
                 $row['coef'],

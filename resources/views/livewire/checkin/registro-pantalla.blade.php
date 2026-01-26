@@ -106,9 +106,6 @@
             <div class="flex items-start justify-between gap-4">
                 <div class="min-w-0">
                     <h1 class="text-xl font-black text-gray-900">Registro presencial / Check-in</h1>
-                    <p class="text-sm text-gray-600 mt-1">
-                        Busca por inmueble (torre + número o número).
-                    </p>
                 </div>
 
                 <div class="w-[360px] max-w-full">
@@ -116,7 +113,6 @@
                         <input
                             type="text"
                             wire:model.live="search"
-                            placeholder="Ej: T3 3502 o 3502"
                             @disabled($registroId && $this->hasPendingChanges())  
                             class="w-full rounded-xl border-gray-300 focus:ring-2 focus:ring-indigo-300 disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
                         />
@@ -205,10 +201,6 @@
                             @else
                                 —
                             @endif
-                        </div>
-
-                        <div class="mt-2 text-xs text-gray-600">
-                            Vista rápida del control asignado al inmueble/grupo.
                         </div>
                     </div>
                 </div>
@@ -443,7 +435,6 @@
                     type="text"
                     wire:model.defer="asistenteNombre"
                     class="w-full rounded-xl border-gray-300"
-                    placeholder="Ej: Carlos Pérez"
                 />
             </div>
 
@@ -472,7 +463,7 @@
                     type="email"
                     wire:model.defer="asistenteCorreo"
                     class="flex-1 min-w-[240px] rounded-xl border-gray-300"
-                    placeholder="Ej: correo@dominio.com"
+                    placeholder="Campo para comentarios"
                 />
 
                 <button
@@ -491,10 +482,6 @@
                     Limpiar
                 </button>
             </div>
-        </div>
-
-        <div class="mt-3 text-xs text-gray-500">
-            * El teléfono es obligatorio para poder cerrar el check-in.
         </div>
     </div>
 

@@ -18,9 +18,6 @@
                 <h1 class="text-3xl md:text-4xl font-black text-[#2E2E2E]">
                     {{ $eventoTitulo }}
                 </h1>
-                <p class="mt-1 text-sm text-gray-600">
-                    Quórum en tiempo real (coeficientes / 100%)
-                </p>
             </div>
 
             @if($eventoImagen)
@@ -55,9 +52,14 @@
                             </p>
 
                             @if($label === 'Retirado')
-                                <p class="mt-1 text-[11px] text-gray-s
-                                    text-gray-500">(Suma de registros en estado RETIRADO)</p>
+                                <p class="mt-1 text-[12px] text-gray-600">
+                                    Controles retirados:
+                                    <span class="font-black text-[#d32f57]">
+                                        {{ $controlesRetiradosUnicos ?? 0 }}
+                                    </span>
+                                </p>
                             @endif
+
                         </div>
                     @endforeach
                 </div>
@@ -70,11 +72,6 @@
                             <p class="text-5xl font-black text-[#0F3D4C] leading-none">
                                 {{ number_format((float)$quorumActual, 2) }}%
                             </p>
-                        </div>
-
-                        <div class="text-right">
-                            <p class="text-xs text-gray-500">Actualiza automático</p>
-                            <p class="text-xs text-gray-500">cada 1.5s</p>
                         </div>
                     </div>
 
@@ -111,7 +108,6 @@
                             <p class="text-xs font-semibold text-gray-600">Llegadas</p>
                             <p class="text-lg font-black text-[#2E2E2E] leading-tight">Bienvenido</p>
                         </div>
-                        <p class="text-[11px] text-gray-500">en tiempo real</p>
                     </div>
 
                     <style>

@@ -21,6 +21,7 @@ class InformeAsambleaExport implements WithMultipleSheets
             new InformeResumenSheet($this->eventoId),
             new InformeAsistenciaSheet($this->eventoId),
             new InformeQuorumSheet($this->eventoId),
+            new InformeAusentesSheet($this->eventoId),
             new InformePoderesSheet($this->eventoId),
             new InformePoderesDetalleSheet($this->eventoId),
         ];
@@ -64,6 +65,7 @@ class InformeResumenSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Co
             ->joinSub($lastPerInmueble, 'u', function ($join) {
                 $join->on('rc.id', '=', 'u.last_id');
             })
+            ->leftJoin('evento_padron as ep', 'ep.id', '=', 'rc.inmueble_base_id')
             ->where('rc.evento_id', $this->eventoId)
             ->whereIn('rc.estado', ['CHECKED_IN', 'RETIRADO'])
             ->get(['rc.estado', 'rc.coef_total_snapshot']);
@@ -106,9 +108,7 @@ class InformeResumenSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Co
         if ($value === null || $value === '') {
             return 0.0;
         }
-
-        // Ej: 0.2159 -> 0.22
-        return round((float) $value, 2);
+        return (float) $value; // SIN round aquí
     }
 
 }
@@ -128,7 +128,8 @@ class InformeQuorumSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Con
     {
         // Columna B (valores) con 2 decimales
         return [
-            'B' => '0.00',
+            'B' => '0.00', // totales
+            'C' => '0.00', // columna "Coef" en tablas
         ];
     }
 
@@ -155,6 +156,7 @@ class InformeQuorumSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Con
                 'rc.cabeza_inmueble_snapshot',
                 'ep.inmueble as inmueble_padron',
                 'ep.propietario as propietario_padron',
+                'ep.coeficiente as coef_padron',
             ]);
 
         $presentes = [];
@@ -165,16 +167,19 @@ class InformeQuorumSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Con
         foreach ($items as $it) {
             $inmueble = $it->cabeza_inmueble_snapshot ?: ($it->inmueble_padron ?? '');
             $propietario = $it->propietario_padron ?? '';
-            $coef = $this->coefReal($it->coef_total_snapshot);
+
+            $coefRaw = (float) ($it->coef_total_snapshot ?? 0);
+
+            $coefShow = round($coefRaw, 2);
 
             if ($it->estado === 'CHECKED_IN') {
-                $coefPresente += $coef;
-                $presentes[] = [$inmueble, $propietario, $coef];
+                $coefPresente += $coefRaw;
+                $presentes[] = [$inmueble, $propietario, $coefRaw];
             }
 
             if ($it->estado === 'RETIRADO') {
-                $coefRetirado += $coef;
-                $retirados[] = [$inmueble, $propietario, $coef];
+                $coefRetirado += $coefRaw;
+                $retirados[] = [$inmueble, $propietario, $coefRaw];
             }
         }
 
@@ -278,6 +283,7 @@ class InformeAsistenciaSheet implements FromArray, WithTitle, \Maatwebsite\Excel
 
                 'ep.inmueble as inmueble_padron',
                 'ep.propietario as propietario_padron',
+                'ep.coeficiente as coef_padron',
                 'c.serial as control_serial_db',
             ]);
 
@@ -286,14 +292,16 @@ class InformeAsistenciaSheet implements FromArray, WithTitle, \Maatwebsite\Excel
             $codigo = $it->control_serial_snapshot ?? ($it->control_serial_db ?? '');
             $inmuebleCabeza = $it->cabeza_inmueble_snapshot ?: ($it->inmueble_padron ?? '');
             $propietario = $it->propietario_padron ?? '';
-            $coef3 = $this->coefReal($it->coef_total_snapshot);
+
+            // ✅ Guardamos el valor REAL (sin redondear) para que Excel también sume bien al seleccionar
+            $coefRaw = (float) ($it->coef_total_snapshot ?? 0);
 
             $rows[] = [
                 $controlNumero,
                 $codigo,
                 $inmuebleCabeza,
                 $propietario,
-                $coef3,
+                $coefRaw, // ✅ antes era $coef3
                 $it->estado,
                 $this->fmtHora($it->checked_in_at ?? null),
                 $this->fmtHora($it->retirado_at ?? null),
@@ -655,3 +663,80 @@ class InformePoderesDetalleSheet implements FromArray, WithTitle, \Maatwebsite\E
         return [];
     }
 }
+
+class InformeAusentesSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Concerns\WithColumnFormatting
+{
+    public function __construct(public int $eventoId)
+    {
+    }
+
+    public function title(): string
+    {
+        return 'Ausentes';
+    }
+
+    public function columnFormats(): array
+    {
+        return [
+            'C' => '0.00', // coeficiente
+        ];
+    }
+
+    public function array(): array
+    {
+        $rows = [];
+
+        $rows[] = ['AUSENTES (NO REGISTRADOS)'];
+        $rows[] = ['Inmuebles del padrón que NO tienen check-in (ni CHECKED_IN ni RETIRADO).'];
+        $rows[] = [''];
+
+        // Encabezados
+        $rows[] = ['Inmueble', 'Propietario', 'Coeficiente', 'Asistente', 'Celular', 'Correo'];
+
+        // Subquery: inmuebles que sí tienen registro válido
+        $presentesIds = DB::table('registros_checkin')
+            ->where('evento_id', $this->eventoId)
+            ->whereIn('estado', ['CHECKED_IN', 'RETIRADO'])
+            ->select('inmueble_base_id')
+            ->distinct();
+
+        // Traemos del padrón los que NO están en presentesIds
+        $ausentes = DB::table('evento_padron as ep')
+            ->where('ep.evento_id', $this->eventoId)
+            ->whereNotIn('ep.id', $presentesIds)
+            ->orderBy('ep.inmueble')
+            ->get([
+                'ep.inmueble',
+                'ep.propietario',
+                'ep.coeficiente',
+                'ep.asistente',
+                'ep.celular_asistente',
+                'ep.correo_asistente',
+            ]);
+
+        $count = 0;
+        $sumCoef = 0.0;
+
+        foreach ($ausentes as $a) {
+            $coefRaw = (float) ($a->coeficiente ?? 0);
+            $sumCoef += $coefRaw;
+            $count++;
+
+            $rows[] = [
+                $a->inmueble ?? '',
+                $a->propietario ?? '',
+                $coefRaw, // ✅ valor real, Excel muestra 2 decimales
+                $a->asistente ?? '',
+                $a->celular_asistente ?? '',
+                $a->correo_asistente ?? '',
+            ];
+        }
+
+        // Totales
+        $rows[] = [''];
+        /*         $rows[] = ['TOTAL AUSENTES:', $count, round($sumCoef, 2)]; */
+
+        return $rows;
+    }
+}
+

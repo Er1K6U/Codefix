@@ -2,9 +2,6 @@
     <div class="flex items-start justify-between gap-4 mb-6">
         <div>
             <h1 class="text-2xl font-black text-[#2E2E2E]">Base Turning</h1>
-            <p class="mt-1 text-sm text-gray-600">
-                Control / Código / Inmueble cabeza / Coef (formato 3 dígitos). Incluye CHECKED_IN y RETIRADO.
-            </p>
         </div>
 
         <div class="flex gap-2">
@@ -44,7 +41,7 @@
                             <td class="px-4 py-3">
                                 <span
                                     class="px-2 py-1 rounded-lg text-xs font-bold
-                                                                {{ $r['estado'] === 'CHECKED_IN' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800' }}">
+                                                                    {{ $r['estado'] === 'CHECKED_IN' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800' }}">
                                     {{ $r['estado'] }}
                                 </span>
                             </td>

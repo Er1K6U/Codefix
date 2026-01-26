@@ -14,12 +14,13 @@ class Show extends Component
     public float $quorumActual = 0.0;
     public float $quorumMax = 0.0;
     public float $quorumRetirado = 0.0;
-    public int $controlesActivos = 0;
 
+    public int $controlesActivos = 0;
+    public int $controlesRetirados = 0;
+    public int $controlesRetiradosUnicos = 0;
 
     public int $crowdSize = 160;
     public int $feedSize = 10;
-
 
     /** @var array<int, array{label:string}> */
     public array $ultimosLlegados = [];
@@ -42,7 +43,11 @@ class Show extends Component
             $this->quorumActual = 0;
             $this->quorumMax = 0;
             $this->quorumRetirado = 0;
+
             $this->controlesActivos = 0;
+            $this->controlesRetirados = 0;
+            $this->controlesRetiradosUnicos = 0;
+
             $this->ultimosLlegados = [];
             return;
         }
@@ -53,17 +58,17 @@ class Show extends Component
             ->where('estado', 'CHECKED_IN')
             ->sum('coef_total_snapshot');
 
-        $this->controlesActivos = DB::table('registros_checkin')
+        $this->quorumActual = round($actual, 2);
+
+        // ✅ Controles activos (únicos)
+        $this->controlesActivos = (int) DB::table('registros_checkin')
             ->where('evento_id', $eventoId)
             ->where('estado', 'CHECKED_IN')
             ->whereNotNull('control_id')
-            ->count();
-
-
-        $this->quorumActual = round($actual, 2);
+            ->distinct()
+            ->count('control_id');
 
         // 1.1) Retirado real = SUM(coef_total_snapshot) de RETIRADO
-        // (Esto hace que al importar un SQL en otra máquina, el “retirado” salga igual.)
         $retirado = (float) DB::table('registros_checkin')
             ->where('evento_id', $eventoId)
             ->where('estado', 'RETIRADO')
@@ -71,12 +76,23 @@ class Show extends Component
 
         $this->quorumRetirado = round($retirado, 2);
 
-        // 2) Últimos llegados (los más recientes) - mantenemos tal cual (CHECKED_IN)
+        // ✅ Controles retirados (únicos)
+        $this->controlesRetirados = (int) DB::table('registros_checkin')
+            ->where('evento_id', $eventoId)
+            ->where('estado', 'RETIRADO')
+            ->whereNotNull('control_id')
+            ->distinct()
+            ->count('control_id');
+
+        // ⚠️ La dejo por compatibilidad (misma lógica que controlesRetirados)
+        $this->controlesRetiradosUnicos = $this->controlesRetirados;
+
+        // 2) Últimos llegados (los más recientes) - CHECKED_IN
         $rows = DB::table('registros_checkin')
             ->where('evento_id', $eventoId)
             ->where('estado', 'CHECKED_IN')
             ->orderByDesc('checked_in_at')
-            ->limit(10)
+            ->limit($this->feedSize)
             ->get(['cabeza_inmueble_snapshot', 'inmueble_base_id']);
 
         $this->ultimosLlegados = $rows->map(function ($r) {
@@ -85,8 +101,6 @@ class Show extends Component
         })->values()->all();
 
         // 3) Máximo = actual + retirado (robusto, depende de DB, no de cache)
-        // Nota: si quieres “máximo histórico del día” independiente de retiros/reingresos,
-        // ahí sí volvemos al cache, pero ya viste que eso no viaja con SQL.
         $this->quorumMax = round($this->quorumActual + $this->quorumRetirado, 2);
 
         // (opcional) dejamos la key asignada por si en el futuro quieres reactivar cache
