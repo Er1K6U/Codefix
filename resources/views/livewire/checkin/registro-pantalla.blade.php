@@ -1,4 +1,4 @@
-<div class="max-w-7xl mx-auto p-6 space-y-5">
+<div class="max-w-7xl mx-auto px-4 py-3 space-y-3">
 
     {{-- ✅ MODAL ÉXITO (más visible) --}}
     @if($checkinMsg)
@@ -99,7 +99,7 @@
     @endif
 
     {{-- ✅ FILA SUPERIOR: 2 columnas (Buscador a la derecha + Inmueble al lado) --}}
-    <div class="grid lg:grid-cols-2 gap-6 items-start">
+        <div class="grid lg:grid-cols-2 gap-4 items-start">
 
         {{-- ✅ Registro presencial / Check-in (AZUL) --}}
         <div class="bg-white border border-gray-200 rounded-2xl shadow-xl p-5 border-l-4 border-l-indigo-400">
@@ -140,7 +140,7 @@
         </div>
 
         {{-- ✅ Inmueble / Resumen (VERDE) --}}
-        <div class="bg-white border border-gray-200 rounded-2xl shadow-xl p-5 border-l-4 border-l-emerald-400">
+        <div class="bg-white border border-gray-200 rounded-2xl shadow-xl p-4 border-l-4 border-l-emerald-400">
             <div class="flex items-start justify-between gap-6">
                 <div class="min-w-0">
                     <div class="flex items-center gap-3">
@@ -215,7 +215,7 @@
     </div>
 
     {{-- ✅ Representación / Poderes (VERDE suave) --}}
-    <div class="bg-white border border-gray-200 rounded-2xl shadow-xl p-6 border-l-4 border-l-emerald-400">
+    <div class="bg-white border border-gray-200 rounded-2xl shadow-xl p-4 border-l-4 border-l-emerald-400">
         <div class="flex items-start justify-between gap-6">
             <div>
                 <h2 class="text-lg font-black text-gray-900">Representación / Poderes</h2>
@@ -351,7 +351,7 @@
     </div>
 
     {{-- ✅ Control de votación (NARANJA) --}}
-    <div class="bg-white border border-gray-200 rounded-2xl shadow-xl p-6 border-l-4 border-l-amber-400">
+    <div class="bg-white border border-gray-200 rounded-2xl shadow-xl p-4 border-l-4 border-l-amber-400">
         <div class="flex flex-wrap items-end justify-between gap-4">
             <div>
                 <h2 class="text-lg font-black text-gray-900">Control de votación</h2>
@@ -419,7 +419,7 @@
     </div>
 
     {{-- ✅ Asistente presente (MORADO) --}}
-    <div class="bg-white border border-gray-200 rounded-2xl shadow-xl p-6 border-l-4 border-l-fuchsia-300">
+    <div class="bg-white border border-gray-200 rounded-2xl shadow-xl p-4 border-l-4 border-l-fuchsia-300">
         <div class="flex items-start justify-between gap-4">
             <div>
                 <h2 class="text-lg font-black text-gray-900">Asistente presente</h2>
