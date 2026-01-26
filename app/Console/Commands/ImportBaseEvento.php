@@ -140,8 +140,15 @@ class ImportBaseEvento extends Command
         }
 
         // Validación fuerte: suma coeficiente ~ 100
-        if (abs($sumCoef - 100.0) > 0.01) {
-            $this->error("La suma de coeficientes NO da 100. Da: " . number_format($sumCoef, 4, '.', ''));
+        // ✅ Validación flexible: suma coeficiente ~ 100 con tolerancia (Excel-friendly)
+        $sumCoef = round($sumCoef, 2);   // redondeo consistente a 2 decimales
+        $epsilon = 0.10;                 // tolerancia permitida (±0.10)
+
+        if (abs($sumCoef - 100.00) > $epsilon) {
+            $this->error(
+                "La suma de coeficientes debe ser 100% (±" . number_format($epsilon, 2) . "). " .
+                "Da: " . number_format($sumCoef, 2, '.', '')
+            );
             return self::FAILURE;
         }
 
