@@ -41,6 +41,16 @@ class RetiroReingreso extends Component
     public ?int $reemplazoNuevoControlId = null;
     public bool $reemplazoNuevoOk = false;
 
+    // ===== Consulta por control =====
+    public ?string $consultaNumero = null;
+    public bool $consultaReady = false;
+
+    public ?string $consultaInmueble = null;
+    public ?string $consultaPropietario = null;
+    public ?string $consultaAsistente = null;
+    public ?string $consultaTelefono = null;
+    public ?string $consultaEstadoRegistro = null;
+
     // retiroNumero | reingresoNumero
 
 
@@ -118,6 +128,7 @@ class RetiroReingreso extends Component
                             ->orWhere('control_numero_snapshot', $num);
                     })
                     ->orderByDesc('checked_in_at')
+                    ->orderByDesc('id')
                     ->first();
 
                 if (!$registro) {
@@ -213,6 +224,7 @@ class RetiroReingreso extends Component
                             ->orWhere('control_numero_snapshot', $num);
                     })
                     ->orderByDesc('checked_in_at')
+                    ->orderByDesc('id')
                     ->first();
 
                 if (!$registro) {
@@ -317,6 +329,7 @@ class RetiroReingreso extends Component
                     ->orWhere('control_numero_snapshot', $num);
             })
             ->orderByDesc('checked_in_at')
+            ->orderByDesc('id')
             ->first();
 
         if (!$registro) {
@@ -403,12 +416,16 @@ class RetiroReingreso extends Component
         $this->dispatch('focus-field', id: 'btnReemplazarControl');
     }
 
+
     // =========================================================
-    //  REEMPLAZAR CONTROL (solo validaciones por ahora)
+    //  REEMPLAZAR CONTROL (DB real, sin crear ni borrar registros)
     // =========================================================
     public function reemplazarControl(): void
     {
         $this->syncEventoFromContext();
+        $eid = (int) ($this->eventoId ?? 0);
+
+        $this->focusBackTo = 'reemplazoNumeroActual';
 
         $actualRaw = trim((string) $this->reemplazoNumeroActual);
         $nuevoRaw = trim((string) $this->reemplazoNumeroNuevo);
@@ -416,30 +433,237 @@ class RetiroReingreso extends Component
         $actual = ctype_digit($actualRaw) ? (int) $actualRaw : 0;
         $nuevo = ctype_digit($nuevoRaw) ? (int) $nuevoRaw : 0;
 
+        if ($eid <= 0) {
+            $this->openModal('Sin evento activo', 'No hay un evento activo en el contexto del puesto.', 'error');
+            return;
+        }
+
         if ($actual <= 0 || $nuevo <= 0) {
-            $this->openModal(
-                'Datos inválidos',
-                'Debes digitar un número válido para el control actual y el nuevo.',
-                'error'
-            );
+            $this->openModal('Datos inválidos', 'Debes digitar un número válido para el control actual y el nuevo.', 'error');
             return;
         }
 
         if ($actual === $nuevo) {
-            $this->openModal(
-                'Controles iguales',
-                'El control actual y el nuevo no pueden ser el mismo.',
-                'error'
-            );
+            $this->openModal('Controles iguales', 'El control actual y el nuevo no pueden ser el mismo.', 'error');
             return;
         }
 
-        // Por ahora solo confirmamos intención (no DB aún)
-        $this->openModal(
-            'Confirmar reemplazo',
-            "Se va a reemplazar el control #{$actual} por el control #{$nuevo}.",
-            'info'
-        );
+        if (!$this->reemplazoRegistroId || !$this->reemplazoControlId) {
+            $this->openModal('Falta control actual', 'Primero digita el control actual y presiona Enter para cargar el dueño.', 'info');
+            $this->dispatch('focus-field', id: 'reemplazoNumeroActual');
+            return;
+        }
+
+        if (!$this->reemplazoNuevoOk || !$this->reemplazoNuevoControlId) {
+            $this->openModal('Nuevo control no validado', 'Valida el nuevo control con Enter. Debe existir y estar LIBRE.', 'info');
+            $this->dispatch('focus-field', id: 'reemplazoNumeroNuevo');
+            return;
+        }
+
+        try {
+            DB::transaction(function () use ($eid, $actual, $nuevo) {
+
+                // Re-leemos dentro de transacción (estado actual real)
+                $controlViejo = DB::table('controles')
+                    ->where('evento_id', $eid)
+                    ->where('numero', $actual)
+                    ->lockForUpdate()
+                    ->first();
+
+                $controlNuevo = DB::table('controles')
+                    ->where('evento_id', $eid)
+                    ->where('numero', $nuevo)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$controlViejo) {
+                    $this->openModal('No existe', "No encontré el control actual #{$actual} en este evento.", 'error');
+                    return;
+                }
+
+                if (!$controlNuevo) {
+                    $this->openModal('No existe', "No encontré el nuevo control #{$nuevo} en este evento.", 'error');
+                    return;
+                }
+
+                if (($controlNuevo->estado ?? null) !== 'LIBRE') {
+                    $this->openModal(
+                        'Nuevo control no disponible',
+                        "El control #{$nuevo} está en estado '{$controlNuevo->estado}'. Debe estar LIBRE.",
+                        'error'
+                    );
+                    return;
+                }
+
+                // Registro objetivo: el “último válido” que cargamos en pantalla
+                $registro = DB::table('registros_checkin')
+                    ->where('evento_id', $eid)
+                    ->where('id', (int) $this->reemplazoRegistroId)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$registro) {
+                    $this->openModal('Registro no encontrado', 'No encontré el registro asociado para reemplazar.', 'error');
+                    return;
+                }
+
+                // Seguridad: no hacemos reemplazo si el registro no tiene control o no coincide con el viejo
+                // (evita reemplazar accidentalmente un registro distinto)
+                $registroControlId = (int) ($registro->control_id ?? 0);
+                if ($registroControlId <= 0) {
+                    $this->openModal('Sin control', 'El registro asociado no tiene control_id. No se puede reemplazar.', 'error');
+                    return;
+                }
+
+                if ($registroControlId !== (int) $controlViejo->id) {
+                    $this->openModal(
+                        'Desfase detectado',
+                        "El registro ya no está asociado al control #{$actual}. Recarga el control actual (Enter) e intenta de nuevo.",
+                        'error'
+                    );
+                    return;
+                }
+
+                // 1) Actualizar registro_checkin: apunta al nuevo control (sin tocar coef/grupo/inmueble)
+                DB::table('registros_checkin')
+                    ->where('id', (int) $registro->id)
+                    ->update([
+                        'control_id' => (int) $controlNuevo->id,
+                        'control_numero_snapshot' => (int) $controlNuevo->numero,
+                        'control_serial_snapshot' => (string) $controlNuevo->serial,
+                        'updated_at' => now(),
+                    ]);
+
+                // 2) Liberar control viejo
+                DB::table('controles')
+                    ->where('id', (int) $controlViejo->id)
+                    ->update([
+                        'estado' => 'LIBRE',
+                        'asignado_a_registro_id' => null,
+                        'updated_at' => now(),
+                    ]);
+
+                // 3) Asignar control nuevo
+                DB::table('controles')
+                    ->where('id', (int) $controlNuevo->id)
+                    ->update([
+                        'estado' => 'ASIGNADO',
+                        'asignado_a_registro_id' => (int) $registro->id,
+                        'updated_at' => now(),
+                    ]);
+
+                // 4) Modal éxito
+                $nombre = $registro->asistente_nombre ?? '—';
+                $tel = $registro->asistente_telefono ?? '—';
+                $this->openModal(
+                    'Control reemplazado',
+                    "Reemplazo exitoso.\n{$nombre} ({$tel})\n#{$actual} → #{$nuevo}",
+                    'success'
+                );
+            });
+
+        } catch (Throwable $e) {
+            $this->openModal('Error', 'Ocurrió un error al reemplazar el control. Revisa el log para más detalle.', 'error');
+            return;
+        } finally {
+            // limpiamos inputs y estado de validación para seguir rápido
+            $this->reemplazoNumeroActual = null;
+            $this->reemplazoNumeroNuevo = null;
+
+            $this->reemplazoNuevoOk = false;
+            $this->reemplazoNuevoControlId = null;
+            $this->reemplazoNuevoEstadoControl = null;
+            $this->reemplazoNuevoSerial = null;
+
+            $this->reemplazoRegistroId = null;
+            $this->reemplazoControlId = null;
+
+            $this->reemplazoInfoNombre = null;
+            $this->reemplazoInfoTelefono = null;
+            $this->reemplazoInfoInmueble = null;
+            $this->reemplazoInfoEstadoRegistro = null;
+            $this->reemplazoInfoEstadoControl = null;
+        }
+    }
+
+    // =========================================================
+    //  CONSULTAR CONTROL (solo lectura)
+    // =========================================================
+    public function consultarControl(): void
+    {
+        $this->syncEventoFromContext();
+        $eid = (int) ($this->eventoId ?? 0);
+
+        // reset resultado
+        $this->consultaReady = false;
+        $this->consultaInmueble = null;
+        $this->consultaPropietario = null;
+        $this->consultaAsistente = null;
+        $this->consultaTelefono = null;
+        $this->consultaEstadoRegistro = null;
+
+        $numRaw = trim((string) $this->consultaNumero);
+        $num = ctype_digit($numRaw) ? (int) $numRaw : 0;
+
+        if ($eid <= 0) {
+            $this->openModal('Sin evento activo', 'No hay un evento activo en el contexto del puesto.', 'error');
+            return;
+        }
+
+        if ($num <= 0) {
+            $this->openModal('Número inválido', 'Digita un número de control válido.', 'error');
+            return;
+        }
+
+        // 1) Control existe en el evento
+        $control = DB::table('controles')
+            ->where('evento_id', $eid)
+            ->where('numero', $num)
+            ->first();
+
+        if (!$control) {
+            $this->openModal('No existe', "No encontré el control #{$num} en este evento.", 'error');
+            return;
+        }
+
+        // 2) Último registro asociado a ese control (igual que tu lógica)
+        $registro = DB::table('registros_checkin')
+            ->where('evento_id', $eid)
+            ->where(function ($q) use ($control, $num) {
+                $q->where('control_id', $control->id)
+                    ->orWhere('control_numero_snapshot', $num);
+            })
+            ->orderByDesc('checked_in_at')
+            ->orderByDesc('id')
+            ->first();
+
+        if (!$registro) {
+            $this->openModal('Sin historial', "El control #{$num} existe, pero no encontré registro asociado en check-in.", 'info');
+            return;
+        }
+
+        // 3) Pintamos datos disponibles desde el registro
+        $this->consultaInmueble = (string) ($registro->cabeza_inmueble_snapshot ?? $registro->inmueble_base_id ?? '—');
+        $this->consultaAsistente = (string) ($registro->asistente_nombre ?? '—');
+        $this->consultaTelefono = (string) ($registro->asistente_telefono ?? '—');
+        $this->consultaEstadoRegistro = (string) ($registro->estado ?? '—');
+
+        // 4) Propietario: depende de tu padrón/tabla. Por ahora lo dejamos “—”.
+        // En el siguiente paso lo conectamos a la tabla real del padrón para traer el propietario.
+        $inmuebleLabel = (string) ($registro->cabeza_inmueble_snapshot ?? $registro->inmueble_base_id ?? '');
+
+        $padron = DB::table('evento_padron')
+            ->where('evento_id', $eid)
+            ->where('inmueble', $inmuebleLabel)
+            ->first(['propietario']);
+
+        $this->consultaPropietario = $padron?->propietario ?: '—';
+
+
+        $this->consultaReady = true;
+
+        // UX: si quieres hacer muchas consultas seguidas
+        $this->dispatch('focus-field', id: 'consultaNumero');
     }
 
     // ===== Modal helpers =====

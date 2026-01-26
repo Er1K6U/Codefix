@@ -8,14 +8,14 @@
             <div class="w-full max-w-md rounded-3xl bg-white border border-gray-200 shadow-2xl p-7">
                 <div class="flex items-start gap-4">
                     <div class="mt-1 w-12 h-12 rounded-2xl flex items-center justify-center
-                                                                                            {{ $modalType === 'success' ? 'bg-emerald-50 border border-emerald-200' : ($modalType === 'info' ? 'bg-sky-50 border border-sky-200' : 'bg-red-50 border border-red-200') }}
-                                                                                    @if($modalType === 'success')
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    <svg class="
-                                                                                        w-7 h-7 text-emerald-600" viewBox="0 0 24 24" fill="none">
-                                                                                        <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"
-                                                                                            stroke-linejoin="round" />
-                                                                                        </svg>
-                                                                                    @elseif($modalType === 'info')
+                                                                                                {{ $modalType === 'success' ? 'bg-emerald-50 border border-emerald-200' : ($modalType === 'info' ? 'bg-sky-50 border border-sky-200' : 'bg-red-50 border border-red-200') }}
+                                                                                        @if($modalType === 'success')
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            <svg class="
+                                                                                            w-7 h-7 text-emerald-600" viewBox="0 0 24 24" fill="none">
+                                                                                            <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"
+                                                                                                stroke-linejoin="round" />
+                                                                                            </svg>
+                                                                                        @elseif($modalType === 'info')
                             <svg class="w-7 h-7 text-sky-600" viewBox="0 0 24 24" fill="none">
                                 <path d="M12 8h.01M11 12h1v4h1" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
                                     stroke-linejoin="round" />
@@ -98,6 +98,39 @@
             </div>
         </div>
     </div>
+    {{-- Consultar control (sin lógica aún) --}}
+    <div class="bg-white border border-gray-200 rounded-2xl shadow-xl p-6 border-l-4 border-l-sky-400">
+        <h2 class="text-lg font-black text-gray-900">Consultar control</h2>
+        <p class="text-sm text-gray-600 mt-1">
+            Digita el número del control para ver a qué inmueble corresponde y poder contactar al asistente.
+        </p>
+
+        <div class="mt-4">
+            <label class="text-sm font-semibold text-gray-700">Número de control</label>
+            <input id="consultaNumero" type="text" wire:model.defer="consultaNumero"
+                wire:keydown.enter.prevent="consultarControl" placeholder="Ej: 27"
+                class="mt-1 w-full rounded-xl border-gray-300 focus:ring-2 focus:ring-sky-200" />
+            <div class="mt-2 text-xs text-gray-500">
+                Presiona <span class="font-semibold">Enter</span> para consultar.
+            </div>
+        </div>
+
+        @if($consultaReady)
+            <div class="mt-4 rounded-2xl border border-sky-200 bg-sky-50 p-4">
+                <div class="text-sm font-black text-gray-900">Resultado</div>
+
+                <div class="mt-2 grid md:grid-cols-2 gap-3 text-sm text-gray-700">
+                    <div><span class="font-semibold">Inmueble/Grupo:</span> {{ $consultaInmueble ?? '—' }}</div>
+                    <div><span class="font-semibold">Propietario:</span> {{ $consultaPropietario ?? '—' }}</div>
+                    <div><span class="font-semibold">Asistente:</span> {{ $consultaAsistente ?? '—' }}</div>
+                    <div><span class="font-semibold">Celular:</span> {{ $consultaTelefono ?? '—' }}</div>
+                    <div class="md:col-span-2 text-xs text-gray-600">
+                        Estado registro: <span class="font-semibold">{{ $consultaEstadoRegistro ?? '—' }}</span>
+                    </div>
+                </div>
+            </div>
+        @endif
+    </div>
     {{-- Reemplazar control (sin lógica aún) --}}
     <div class="bg-white border border-gray-200 rounded-2xl shadow-xl p-6 border-l-4 border-l-amber-400">
         <h2 class="text-lg font-black text-gray-900">Reemplazar control</h2>
@@ -147,7 +180,7 @@
         @if($reemplazoNumeroNuevo)
             <div
                 class="mt-3 rounded-2xl border p-4
-                                    {{ $reemplazoNuevoOk ? 'border-emerald-200 bg-emerald-50' : 'border-gray-200 bg-gray-50' }}">
+                                        {{ $reemplazoNuevoOk ? 'border-emerald-200 bg-emerald-50' : 'border-gray-200 bg-gray-50' }}">
                 <div class="text-sm font-black text-gray-900">Nuevo control: validación</div>
 
                 <div class="mt-2 grid md:grid-cols-2 gap-3 text-sm text-gray-700">
