@@ -49,14 +49,6 @@
     {{-- Header --}}
     <div class="bg-white border border-gray-200 rounded-2xl shadow-xl p-6">
         <h1 class="text-2xl font-black text-gray-900">Retiro / Reingreso de controles</h1>
-        <p class="text-sm text-gray-600 mt-1">
-            Retira un control para descontar quórum, o reingrésalo para volver a sumar el coeficiente (incluye poderes
-            del grupo).
-        </p>
-        <div class="mt-3 text-xs text-gray-500">
-            Evento activo (contexto del puesto): <span
-                class="font-semibold text-gray-800">{{ $eventoTitulo ?? '—' }}</span>
-        </div>
     </div>
 
     {{-- Dos acciones --}}

@@ -4,8 +4,7 @@
             {{ $idEvento ? 'Editar evento' : 'Nuevo evento' }}
         </h1>
 
-        <a href="{{ route('eventos.index') }}"
-           class="text-sm text-gray-600 hover:underline">
+        <a href="{{ route('eventos.index') }}" class="text-sm text-gray-600 hover:underline">
             ← Volver
         </a>
     </div>
@@ -19,27 +18,17 @@
 
         <div>
             <label class="text-sm font-semibold text-gray-700">Título</label>
-            <input
-                type="text"
-                wire:model.live="titulo"
-                class="mt-1 w-full rounded-xl border-gray-300 focus:ring-[#0F3D4C]"
-                placeholder="Ej: Asamblea Naranjo 2026"
-            >
-            <p class="mt-1 text-xs text-gray-500">
-                El slug se generará automáticamente a partir del título (ya no se pide manual).
-            </p>
+            <input type="text" wire:model.live="titulo"
+                class="mt-1 w-full rounded-xl border-gray-300 focus:ring-[#0F3D4C]">
             @error('titulo') <p class="text-red-600 text-sm">{{ $message }}</p> @enderror
         </div>
 
         <div>
-          <label class="text-sm font-semibold text-gray-700">Descripción (interna)</label>
-          <textarea
-              wire:model.live="descripcion"
-              rows="4"
-              class="mt-1 w-full rounded-xl border-gray-300 focus:ring-2 focus:ring-[#0F3D4C]"
-              placeholder="Notas para el equipo: logística, instrucciones, observaciones..."
-          ></textarea>
-          @error('descripcion') <p class="text-red-600 text-sm">{{ $message }}</p> @enderror
+            <label class="text-sm font-semibold text-gray-700">Descripción (interna)</label>
+            <textarea wire:model.live="descripcion" rows="4"
+                class="mt-1 w-full rounded-xl border-gray-300 focus:ring-2 focus:ring-[#0F3D4C]"
+                placeholder="Notas para el equipo: logística, instrucciones, observaciones..."></textarea>
+            @error('descripcion') <p class="text-red-600 text-sm">{{ $message }}</p> @enderror
         </div>
 
         {{-- ✅ Excel base del evento (padrón) --}}
@@ -48,20 +37,12 @@
                 Excel base del evento (Padrón / Coeficientes)
             </label>
 
-            <input
-                type="file"
-                wire:model="baseExcelFile"
-                accept=".xlsx,.xls"
-                class="block w-full text-sm text-gray-700
+            <input type="file" wire:model="baseExcelFile" accept=".xlsx,.xls" class="block w-full text-sm text-gray-700
                        file:mr-4 file:py-2 file:px-4
                        file:rounded-xl file:border-0
                        file:bg-[#0F3D4C] file:text-white
                        hover:file:opacity-90 transition
-                       rounded-xl border-gray-300"
-            />
-            <p class="mt-2 text-xs text-gray-500">
-                Sube el archivo Excel de base. Se guardará en <span class="font-mono">storage/app/imports</span>.
-            </p>
+                       rounded-xl border-gray-300" />
 
             @error('baseExcelFile')
                 <p class="mt-2 text-sm text-red-600 font-semibold">{{ $message }}</p>
@@ -74,20 +55,12 @@
                 Excel de controles
             </label>
 
-            <input
-                type="file"
-                wire:model="controlesExcelFile"
-                accept=".xlsx,.xls"
-                class="block w-full text-sm text-gray-700
+            <input type="file" wire:model="controlesExcelFile" accept=".xlsx,.xls" class="block w-full text-sm text-gray-700
                        file:mr-4 file:py-2 file:px-4
                        file:rounded-xl file:border-0
                        file:bg-[#0F3D4C] file:text-white
                        hover:file:opacity-90 transition
-                       rounded-xl border-gray-300"
-            />
-            <p class="mt-2 text-xs text-gray-500">
-                Sube el Excel con la numeración de controles. También se guardará en <span class="font-mono">storage/app/imports</span>.
-            </p>
+                       rounded-xl border-gray-300" />
 
             @error('controlesExcelFile')
                 <p class="mt-2 text-sm text-red-600 font-semibold">{{ $message }}</p>
@@ -100,16 +73,12 @@
                 Imagen del evento
             </label>
 
-            <input
-                type="file"
-                wire:model="imagenFile"
-                class="block w-full text-sm text-gray-700
+            <input type="file" wire:model="imagenFile" class="block w-full text-sm text-gray-700
                        file:mr-4 file:py-2 file:px-4
                        file:rounded-xl file:border-0
                        file:bg-[#0F3D4C] file:text-white
                        hover:file:opacity-90 transition
-                       rounded-xl border-gray-300"
-            />
+                       rounded-xl border-gray-300" />
 
             @error('imagenFile')
                 <p class="mt-2 text-sm text-red-600 font-semibold">{{ $message }}</p>
@@ -123,10 +92,10 @@
                     </div>
                     <p class="text-sm text-gray-600">Vista previa (sin guardar aún)</p>
 
-                {{-- Imagen actual --}}
+                    {{-- Imagen actual --}}
                 @elseif ($imagenActual)
                     <div class="w-24 h-24 rounded-xl overflow-hidden border bg-white shadow">
-                        <img src="{{ asset('storage/'.$imagenActual) }}" class="w-full h-full object-cover">
+                        <img src="{{ asset('storage/' . $imagenActual) }}" class="w-full h-full object-cover">
                     </div>
                     <p class="text-sm text-gray-600">Imagen actual</p>
 
@@ -138,11 +107,8 @@
 
         <div>
             <label class="text-sm font-semibold text-gray-700">Fecha inicio</label>
-            <input
-                type="date"
-                wire:model.live="fecha_inicio"
-                class="mt-1 w-full rounded-xl border-gray-300 focus:ring-[#0F3D4C]"
-            >
+            <input type="date" wire:model.live="fecha_inicio"
+                class="mt-1 w-full rounded-xl border-gray-300 focus:ring-[#0F3D4C]">
             @error('fecha_inicio') <p class="text-red-600 text-sm">{{ $message }}</p> @enderror
         </div>
 
@@ -152,10 +118,7 @@
                 Activo
             </label>
 
-            <button
-                wire:click="save"
-                class="bg-[#0F3D4C] text-white px-5 py-2 rounded-xl hover:opacity-90 transition"
-            >
+            <button wire:click="save" class="bg-[#0F3D4C] text-white px-5 py-2 rounded-xl hover:opacity-90 transition">
                 Guardar evento
             </button>
         </div>
