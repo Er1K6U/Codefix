@@ -17,7 +17,7 @@
                             {{ $checkinMsg }}
                         </p>
 
-                        <div class="mt-5 flex justify-end">
+                        <div class="mt-3 flex justify-end">
                             <button
                                 type="button"
                                 wire:click="$set('checkinMsg', null)"
@@ -50,7 +50,7 @@
                             {{ $checkinError }}
                         </p>
 
-                        <div class="mt-5 flex justify-end">
+                        <div class="mt-3 flex justify-end">
                             <button
                                 type="button"
                                 wire:click="$set('checkinError', null)"
@@ -83,7 +83,7 @@
                             {{ $controlModalBody }}
                         </p>
 
-                        <div class="mt-5 flex justify-end">
+                        <div class="mt-3 flex justify-end">
                             <button
                                 type="button"
                                 wire:click="closeControlModal"
@@ -236,7 +236,7 @@
         </div>
 
         @if($registroId)
-            <div class="mt-5 flex flex-wrap items-end gap-4">
+            <div class="mt-3 flex flex-wrap items-end gap-4">
                 <div class="flex items-center gap-3 w-full lg:w-auto">
                     <label class="text-sm font-semibold text-gray-700 whitespace-nowrap">Agregar poder</label>
 
@@ -289,7 +289,7 @@
             </div>
 
             {{-- Tabla con scroll vertical sutil --}}
-            <div class="mt-5 border border-gray-200 rounded-2xl overflow-hidden">
+            <div class="mt-3 border border-gray-200 rounded-2xl overflow-hidden">
                 <div class="grid grid-cols-12 gap-3 px-4 py-3 bg-emerald-50 text-xs font-semibold text-gray-600">
                     <div class="col-span-3">Inmueble</div>
                     <div class="col-span-6">Propietario</div>
@@ -428,7 +428,7 @@
         </div>
 
         {{-- Labels al lado del input para ahorrar espacio --}}
-        <div class="mt-5 grid lg:grid-cols-2 gap-4">
+        <div class="mt-3 grid lg:grid-cols-2 gap-4">
             <div class="flex items-center gap-3">
                 <label class="text-sm font-semibold text-gray-700 w-44 shrink-0">Nombre (opcional)</label>
                 <input
@@ -495,7 +495,7 @@
                     antes de cambiar de inmueble o limpiar.
                 </p>
 
-                <div class="mt-5 flex justify-end gap-3">
+                <div class="mt-3 flex justify-end gap-3">
                     <button type="button"
                         wire:click="$set('confirmSaveRequired', false)"
                         class="px-4 py-2 rounded-xl border border-gray-300 hover:bg-gray-50 font-semibold">
@@ -521,7 +521,7 @@
                     Tienes datos del asistente que no se han guardado. ¿Deseas descartarlos y continuar?
                 </p>
 
-                <div class="mt-5 flex justify-end gap-3">
+                <div class="mt-3 flex justify-end gap-3">
                     <button type="button" wire:click="cancelDiscard"
                         class="px-4 py-2 rounded-xl border border-gray-300 hover:bg-gray-50 font-semibold">
                         Cancelar
