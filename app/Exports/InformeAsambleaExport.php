@@ -8,7 +8,6 @@ use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Concerns\FromArray;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-
 class InformeAsambleaExport implements WithMultipleSheets
 {
     public function __construct(public int $eventoId)
@@ -28,7 +27,7 @@ class InformeAsambleaExport implements WithMultipleSheets
     }
 }
 
-class InformeResumenSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Concerns\WithColumnFormatting
+class InformeResumenSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Concerns\WithColumnFormatting, \Maatwebsite\Excel\Concerns\WithStyles
 {
     public function __construct(public int $eventoId)
     {
@@ -41,10 +40,8 @@ class InformeResumenSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Co
 
     public function columnFormats(): array
     {
-        // Columna B = valores numéricos del resumen
         return [
-            'C' => '0.00', // coef cabeza
-            'F' => '0.00', // coef apoderado
+            'B' => '0.00',
         ];
     }
 
@@ -54,7 +51,7 @@ class InformeResumenSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Co
         $titulo = $evento->titulo ?? 'Evento';
         $fecha = now()->format('Y-m-d H:i');
 
-        // Tomamos 1 registro por inmueble (último estado válido) igual que Base Turning
+        // Último registro válido por inmueble con registro
         $lastPerInmueble = DB::table('registros_checkin')
             ->selectRaw('MAX(id) as last_id')
             ->where('evento_id', $this->eventoId)
@@ -65,52 +62,98 @@ class InformeResumenSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Co
             ->joinSub($lastPerInmueble, 'u', function ($join) {
                 $join->on('rc.id', '=', 'u.last_id');
             })
-            ->leftJoin('evento_padron as ep', 'ep.id', '=', 'rc.inmueble_base_id')
             ->where('rc.evento_id', $this->eventoId)
             ->whereIn('rc.estado', ['CHECKED_IN', 'RETIRADO'])
-            ->get(['rc.estado', 'rc.coef_total_snapshot']);
+            ->get(['rc.estado', 'rc.coef_total_snapshot', 'rc.control_id']);
 
-        $presentes = 0;
-        $retirados = 0;
-        $totalInmuebles = $items->count();
+        $coefPresente = 0.0;
+        $coefRetirado = 0.0;
 
         foreach ($items as $it) {
             $coef = $this->coefReal($it->coef_total_snapshot);
 
-            if ($it->estado === 'CHECKED_IN')
-                $presentes += $coef;
-            if ($it->estado === 'RETIRADO')
-                $retirados += $coef;
+            if ($it->estado === 'CHECKED_IN') {
+                $coefPresente += $coef;
+            }
+
+            if ($it->estado === 'RETIRADO') {
+                $coefRetirado += $coef;
+            }
         }
 
-        $presentes = round($presentes, 2);
-        $retirados = round($retirados, 2);
-        $totalCoef = round($presentes + $retirados, 2);
+        $coefPresente = round($coefPresente, 2);
+        $coefRetirado = round($coefRetirado, 2);
+
+        // Controles activos / registros válidos (valor nominal, sin decimales)
+        $controlesActivos = DB::table('registros_checkin')
+            ->where('evento_id', $this->eventoId)
+            ->whereIn('estado', ['CHECKED_IN', 'RETIRADO'])
+            ->whereNotNull('control_id')
+            ->distinct()
+            ->count('control_id');
+
+        // Coeficiente no asistió:
+        // padrón que no tuvo check-in válido y tampoco quedó representado como poder
+        $coefNoAsistio = (float) DB::table('evento_padron as ep')
+            ->where('ep.evento_id', $this->eventoId)
+            ->whereNotExists(function ($q) {
+                $q->select(DB::raw(1))
+                    ->from('registros_checkin as rc')
+                    ->whereColumn('rc.inmueble_base_id', 'ep.id')
+                    ->where('rc.evento_id', $this->eventoId)
+                    ->whereIn('rc.estado', ['CHECKED_IN', 'RETIRADO']);
+            })
+            ->whereNotExists(function ($q) {
+                $q->select(DB::raw(1))
+                    ->from('representacion_miembros as rm')
+                    ->whereColumn('rm.padron_id', 'ep.id')
+                    ->where('rm.evento_id', $this->eventoId)
+                    ->where('rm.es_cabeza', 0);
+            })
+            ->sum('ep.coeficiente');
+
+        $coefNoAsistio = round($coefNoAsistio, 2);
+
+        // Total correcto del evento
+        $coefTotal = round($coefPresente + $coefRetirado + $coefNoAsistio, 2);
 
         return [
-            ['COEFIX · INFORME DE ASAMBLEA'],
+            ['COEFIX - INFORME DE ASAMBLEA'],
             ['Evento:', $titulo],
             ['Generado:', $fecha],
             [''],
             ['RESUMEN GENERAL'],
-            ['Inmuebles (con registro válido):', $totalInmuebles],
-            ['Coeficiente presente (CHECKED_IN):', $presentes],
-            ['Coeficiente retirado (RETIRADO):', $retirados],
-            ['Coeficiente total (presente + retirado):', $totalCoef],
+            ['Controles activos:', $controlesActivos],
+            ['Coeficiente presente (CHECKED_IN):', $coefPresente],
+            ['Coeficiente retirado (RETIRADO):', $coefRetirado],
+            ['Coeficiente no asistió:', $coefNoAsistio],
+            ['Coeficiente total (presente + retirado + no asistió):', $coefTotal],
             [''],
             ['Notas:'],
-            ['- Los coeficientes se calculan usando coef_total_snapshot y se muestran con 2 decimales.'],
-            ['- Este resumen toma el último estado válido por inmueble (CHECKED_IN o RETIRADO).'],
+            ['- "Controles activos" se muestra como valor nominal (sin decimales).'],
+            ['- "Coeficiente no asistió" corresponde a inmuebles sin check-in válido y no representados como poder.'],
+            ['- El total esperado debe aproximarse a 100.00 en bases porcentuales.'],
         ];
     }
+
+    public function styles(Worksheet $sheet)
+    {
+        // B6 = valor de "Controles activos"
+        $sheet->getStyle('B6')
+            ->getNumberFormat()
+            ->setFormatCode('0');
+
+        return [];
+    }
+
     private function coefReal($value): float
     {
         if ($value === null || $value === '') {
             return 0.0;
         }
-        return (float) $value; // SIN round aquí
-    }
 
+        return (float) $value;
+    }
 }
 
 class InformeQuorumSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Concerns\WithColumnFormatting
@@ -126,16 +169,14 @@ class InformeQuorumSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Con
 
     public function columnFormats(): array
     {
-        // Columna B (valores) con 2 decimales
         return [
-            'B' => '0.00', // totales
-            'C' => '0.00', // columna "Coef" en tablas
+            'B' => '0.00',
+            'C' => '0.00',
         ];
     }
 
     public function array(): array
     {
-        // Tomamos 1 registro por inmueble (último estado válido)
         $lastPerInmueble = DB::table('registros_checkin')
             ->selectRaw('MAX(id) as last_id')
             ->where('evento_id', $this->eventoId)
@@ -167,10 +208,7 @@ class InformeQuorumSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Con
         foreach ($items as $it) {
             $inmueble = $it->cabeza_inmueble_snapshot ?: ($it->inmueble_padron ?? '');
             $propietario = $it->propietario_padron ?? '';
-
             $coefRaw = (float) ($it->coef_total_snapshot ?? 0);
-
-            $coefShow = round($coefRaw, 2);
 
             if ($it->estado === 'CHECKED_IN') {
                 $coefPresente += $coefRaw;
@@ -199,14 +237,16 @@ class InformeQuorumSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Con
 
         $rows[] = ['PRESENTES'];
         $rows[] = ['Inmueble cabeza', 'Propietario', 'Coef'];
-        foreach ($presentes as $r)
+        foreach ($presentes as $r) {
             $rows[] = $r;
+        }
 
         $rows[] = [''];
         $rows[] = ['RETIRADOS'];
         $rows[] = ['Inmueble cabeza', 'Propietario', 'Coef'];
-        foreach ($retirados as $r)
+        foreach ($retirados as $r) {
             $rows[] = $r;
+        }
 
         return $rows;
     }
@@ -216,6 +256,7 @@ class InformeQuorumSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Con
         if ($value === null || $value === '') {
             return 0.0;
         }
+
         return round((float) $value, 2);
     }
 }
@@ -230,9 +271,9 @@ class InformeAsistenciaSheet implements FromArray, WithTitle, \Maatwebsite\Excel
     {
         return 'Asistencia';
     }
+
     public function columnFormats(): array
     {
-        // Columna E = Coeficiente con 2 decimales (ej: 5.36)
         return [
             'E' => '0.00',
         ];
@@ -242,18 +283,17 @@ class InformeAsistenciaSheet implements FromArray, WithTitle, \Maatwebsite\Excel
     {
         $rows = [];
 
-        // Encabezado explicativo (como te gusta, bien presentado)
         $rows[] = ['ASISTENCIA (BASE TURNING)'];
         $rows[] = ['Listado consolidado por inmueble cabeza. Incluye CHECKED_IN y RETIRADO.'];
         $rows[] = [''];
         $rows[] = ['# Control', 'Código', 'Inmueble cabeza', 'Propietario', 'Coef', 'Estado', 'Hora check-in', 'Hora retiro', 'Hora reingreso'];
 
-        // 1 fila por inmueble (último registro válido)
         $lastPerInmueble = DB::table('registros_checkin')
             ->selectRaw('MAX(id) as last_id')
             ->where('evento_id', $this->eventoId)
             ->whereIn('estado', ['CHECKED_IN', 'RETIRADO'])
             ->groupBy('inmueble_base_id');
+
         $items = DB::table('registros_checkin as rc')
             ->joinSub($lastPerInmueble, 'u', function ($join) {
                 $join->on('rc.id', '=', 'u.last_id');
@@ -275,12 +315,9 @@ class InformeAsistenciaSheet implements FromArray, WithTitle, \Maatwebsite\Excel
                 'rc.control_serial_snapshot',
                 'rc.coef_total_snapshot',
                 'rc.cabeza_inmueble_snapshot',
-
-                // ✅ horas
                 'rc.checked_in_at',
                 'rc.retirado_at',
                 'rc.reingreso_at',
-
                 'ep.inmueble as inmueble_padron',
                 'ep.propietario as propietario_padron',
                 'ep.coeficiente as coef_padron',
@@ -292,8 +329,6 @@ class InformeAsistenciaSheet implements FromArray, WithTitle, \Maatwebsite\Excel
             $codigo = $it->control_serial_snapshot ?? ($it->control_serial_db ?? '');
             $inmuebleCabeza = $it->cabeza_inmueble_snapshot ?: ($it->inmueble_padron ?? '');
             $propietario = $it->propietario_padron ?? '';
-
-            // ✅ Guardamos el valor REAL (sin redondear) para que Excel también sume bien al seleccionar
             $coefRaw = (float) ($it->coef_total_snapshot ?? 0);
 
             $rows[] = [
@@ -301,7 +336,7 @@ class InformeAsistenciaSheet implements FromArray, WithTitle, \Maatwebsite\Excel
                 $codigo,
                 $inmuebleCabeza,
                 $propietario,
-                $coefRaw, // ✅ antes era $coef3
+                $coefRaw,
                 $it->estado,
                 $this->fmtHora($it->checked_in_at ?? null),
                 $this->fmtHora($it->retirado_at ?? null),
@@ -311,22 +346,23 @@ class InformeAsistenciaSheet implements FromArray, WithTitle, \Maatwebsite\Excel
 
         return $rows;
     }
+
     private function coefReal($value): float
     {
         if ($value === null || $value === '') {
             return 0.0;
         }
 
-        // Ej: 0.2159 -> 0.22
         return round((float) $value, 2);
     }
+
     private function fmtHora($dt): string
     {
-        if (!$dt)
+        if (!$dt) {
             return '';
+        }
 
         try {
-            // Si lo que viene está en UTC, lo convertimos a la TZ de la app
             return \Carbon\Carbon::parse($dt, 'UTC')
                 ->setTimezone(config('app.timezone'))
                 ->format('Y-m-d H:i:s');
@@ -335,6 +371,7 @@ class InformeAsistenciaSheet implements FromArray, WithTitle, \Maatwebsite\Excel
         }
     }
 }
+
 class InformePoderesSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Concerns\WithColumnFormatting
 {
     public function __construct(public int $eventoId)
@@ -348,11 +385,10 @@ class InformePoderesSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Co
 
     public function columnFormats(): array
     {
-        // D,E,F = coeficientes (numéricos con 2 decimales)
         return [
-            'D' => '0.00', // coef propio
-            'E' => '0.00', // coef por poderes
-            'F' => '0.00', // coef total
+            'D' => '0.00',
+            'E' => '0.00',
+            'F' => '0.00',
         ];
     }
 
@@ -377,8 +413,6 @@ class InformePoderesSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Co
             'Código Control',
         ];
 
-        // ✅ Inmuebles que están representados por otro (apoderados):
-        // si un inmueble aparece como es_cabeza=0 en algún grupo, NO debe salir como cabeza independiente.
         $apoderadosIds = DB::table('representacion_miembros')
             ->where('evento_id', $this->eventoId)
             ->where('es_cabeza', 0)
@@ -387,14 +421,12 @@ class InformePoderesSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Co
             ->values()
             ->all();
 
-        // Último registro válido por inmueble (para estado/control de la cabeza)
         $lastRcByInmueble = DB::table('registros_checkin')
             ->selectRaw('inmueble_base_id, MAX(id) as last_id')
             ->where('evento_id', $this->eventoId)
             ->whereIn('estado', ['CHECKED_IN', 'RETIRADO'])
             ->groupBy('inmueble_base_id');
 
-        // Grupos (cabezas) del evento, PERO excluyendo cabezas que son apoderados de otro
         $grupos = DB::table('representacion_grupos as g')
             ->leftJoin('evento_padron as cabeza', 'cabeza.id', '=', 'g.cabeza_padron_id')
             ->leftJoinSub($lastRcByInmueble, 'lr', function ($join) {
@@ -409,20 +441,16 @@ class InformePoderesSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Co
             ->get([
                 'g.id as grupo_id',
                 'g.cabeza_padron_id',
-
                 'g.control_numero as g_control_numero',
                 'g.control_serial as g_control_serial',
-
                 'cabeza.inmueble as cabeza_inmueble',
                 'cabeza.propietario as cabeza_propietario',
                 'cabeza.coeficiente as cabeza_coef',
-
                 'rc.estado as rc_estado',
                 'rc.control_numero_snapshot',
                 'rc.control_serial_snapshot',
             ]);
 
-        // Precargamos miembros por grupo (para sumar coef de apoderados)
         $miembros = DB::table('representacion_miembros as rm')
             ->join('evento_padron as ep', 'ep.id', '=', 'rm.padron_id')
             ->where('rm.evento_id', $this->eventoId)
@@ -440,10 +468,7 @@ class InformePoderesSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Co
         foreach ($grupos as $g) {
             $grupoMiembros = $miembros->get($g->grupo_id, collect());
 
-            // poderes = miembros que NO son cabeza
             $poderesCount = $grupoMiembros->where('es_cabeza', 0)->count();
-
-            // coef propio = coef de la cabeza (evento_padron)
             $coefPropioRaw = (float) ($g->cabeza_coef ?? 0);
 
             $coefPoderesRaw = 0.0;
@@ -453,12 +478,10 @@ class InformePoderesSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Co
                 }
             }
 
-            // Para mostrar en fila:
             $coefPropio = $this->coefReal($coefPropioRaw);
             $coefPoderes = $this->coefReal($coefPoderesRaw);
             $coefTotal = $this->coefReal($coefPropioRaw + $coefPoderesRaw);
 
-            // estado/control: preferimos snapshots de rc; fallback a campos del grupo
             $estado = $g->rc_estado ?? '';
             $controlNumero = $g->control_numero_snapshot ?? ($g->g_control_numero ?? '');
             $controlSerial = $g->control_serial_snapshot ?? ($g->g_control_serial ?? '');
@@ -480,7 +503,6 @@ class InformePoderesSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Co
             $totalCoefFinal += ($coefPropioRaw + $coefPoderesRaw);
         }
 
-        // Fila total visual (ahora sí debería cuadrar <= 100)
         $rows[] = [''];
         $rows[] = [
             'TOTAL',
@@ -521,15 +543,14 @@ class InformePoderesDetalleSheet implements FromArray, WithTitle, \Maatwebsite\E
     public function columnFormats(): array
     {
         return [
-            'A' => '@',    // Cabeza (inmueble) como texto
-            'D' => '@',    // Apoderado (inmueble) como texto
-            'C' => '0.00', // Coef cabeza
-            'F' => '0.00', // Coef apoderado
+            'A' => '@',
+            'D' => '@',
+            'C' => '0.00',
+            'F' => '0.00',
         ];
     }
 
     private array $blocks = [];
-
 
     public function array(): array
     {
@@ -539,16 +560,14 @@ class InformePoderesDetalleSheet implements FromArray, WithTitle, \Maatwebsite\E
         $rows[] = ['Listado de apoderados agrupados por inmueble cabeza.'];
         $rows[] = [''];
 
-        // Encabezado
         $rows[] = ['Cabeza (inmueble)', 'Propietario cabeza', 'Coef cabeza', 'Apoderado (inmueble)', 'Apoderado (propietario)', 'Coef apoderado'];
 
-        // Traemos miembros + datos del padrón
         $items = DB::table('representacion_miembros as rm')
             ->join('representacion_grupos as g', 'g.id', '=', 'rm.grupo_id')
             ->join('evento_padron as cabeza', 'cabeza.id', '=', 'g.cabeza_padron_id')
             ->join('evento_padron as ap', 'ap.id', '=', 'rm.padron_id')
             ->where('rm.evento_id', $this->eventoId)
-            ->where('rm.es_cabeza', 0) // solo apoderados
+            ->where('rm.es_cabeza', 0)
             ->orderBy('cabeza.inmueble')
             ->orderBy('ap.inmueble')
             ->get([
@@ -561,15 +580,13 @@ class InformePoderesDetalleSheet implements FromArray, WithTitle, \Maatwebsite\E
                 'ap.coeficiente as ap_coef',
             ]);
 
-        // Agrupar por cabeza (inmueble)
         $byCabeza = $items->groupBy('cabeza_inmueble');
 
         foreach ($byCabeza as $cabezaInmueble => $list) {
-            $blockStart = count($rows) + 1; // Excel rows son 1-based
+            $blockStart = count($rows) + 1;
             $propCabeza = $list->first()->cabeza_propietario ?? '';
             $coefCabeza = $this->coefReal($list->first()->cabeza_coef ?? 0);
 
-            // Fila “título” del grupo (la dejamos simple por ahora)
             $rows[] = ['CABEZA', $cabezaInmueble, $coefCabeza, $propCabeza, '', ''];
             $rows[] = ['', '', '', '', '', ''];
 
@@ -589,13 +606,11 @@ class InformePoderesDetalleSheet implements FromArray, WithTitle, \Maatwebsite\E
                 ];
             }
 
-            // Subtotal visual por cabeza
             $rows[] = ['', '', '', '', 'Subtotal apoderados:', $this->coefReal($sumAp)];
-            $rows[] = ['']; // línea separadora
-            $blockEnd = count($rows); // hasta la fila del subtotal
+            $rows[] = [''];
+            $blockEnd = count($rows);
             $this->blocks[] = [$blockStart, $blockEnd];
-
-            $rows[] = ['']; // línea separadora (fuera del borde)
+            $rows[] = [''];
         }
 
         return $rows;
@@ -609,44 +624,35 @@ class InformePoderesDetalleSheet implements FromArray, WithTitle, \Maatwebsite\E
 
         return round((float) $value, 2);
     }
+
     public function styles(Worksheet $sheet)
     {
-        // Título principal
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
 
-        // Encabezados de tabla (fila 4)
         $sheet->getStyle('A4:F4')->getFont()->setBold(true);
         $sheet->getStyle('A4:F4')->getBorders()->getBottom()->setBorderStyle('thin');
 
-        // Ajustes visuales generales
         foreach (range('A', 'F') as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
             $sheet->freezePane('A5');
         }
 
-        // Estilos por bloque
         foreach ($this->blocks as [$start, $end]) {
-            // Borde suave alrededor del bloque (A..F)
             $sheet->getStyle("A{$start}:F{$end}")
                 ->getBorders()
                 ->getOutline()
                 ->setBorderStyle('thin');
 
-            // Fila “CABEZA” (es la primera fila del bloque + 1 si tu bloque inicia justo donde agregas la fila CABEZA)
-            // En tu armado actual, la fila CABEZA es la primera fila del bloque.
             $sheet->getStyle("A{$start}:F{$start}")
                 ->getFont()
                 ->setBold(true);
 
-            // Fondo sutil fila CABEZA (gris claro)
             $sheet->getStyle("A{$start}:F{$start}")
                 ->getFill()
                 ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
                 ->getStartColor()
                 ->setARGB('FFF2F2F2');
 
-            // Subtotal (buscamos la fila que contiene "Subtotal apoderados:")
-            // Como está siempre hacia el final, recorremos el rango del bloque
             for ($r = $start; $r <= $end; $r++) {
                 $val = $sheet->getCell("E{$r}")->getValue();
                 if ($val === 'Subtotal apoderados:') {
@@ -678,7 +684,7 @@ class InformeAusentesSheet implements FromArray, WithTitle, \Maatwebsite\Excel\C
     public function columnFormats(): array
     {
         return [
-            'C' => '0.00', // coeficiente
+            'C' => '0.00',
         ];
     }
 
@@ -687,23 +693,27 @@ class InformeAusentesSheet implements FromArray, WithTitle, \Maatwebsite\Excel\C
         $rows = [];
 
         $rows[] = ['AUSENTES (NO REGISTRADOS)'];
-        $rows[] = ['Inmuebles del padrón que NO tienen check-in (ni CHECKED_IN ni RETIRADO).'];
+        $rows[] = ['Inmuebles del padrón que NO tienen check-in válido y que tampoco quedaron representados como poder.'];
         $rows[] = [''];
 
-        // Encabezados
         $rows[] = ['Inmueble', 'Propietario', 'Coeficiente', 'Asistente', 'Celular', 'Correo'];
 
-        // Subquery: inmuebles que sí tienen registro válido
-        $presentesIds = DB::table('registros_checkin')
-            ->where('evento_id', $this->eventoId)
-            ->whereIn('estado', ['CHECKED_IN', 'RETIRADO'])
-            ->select('inmueble_base_id')
-            ->distinct();
-
-        // Traemos del padrón los que NO están en presentesIds
         $ausentes = DB::table('evento_padron as ep')
             ->where('ep.evento_id', $this->eventoId)
-            ->whereNotIn('ep.id', $presentesIds)
+            ->whereNotExists(function ($q) {
+                $q->select(DB::raw(1))
+                    ->from('registros_checkin as rc')
+                    ->whereColumn('rc.inmueble_base_id', 'ep.id')
+                    ->where('rc.evento_id', $this->eventoId)
+                    ->whereIn('rc.estado', ['CHECKED_IN', 'RETIRADO']);
+            })
+            ->whereNotExists(function ($q) {
+                $q->select(DB::raw(1))
+                    ->from('representacion_miembros as rm')
+                    ->whereColumn('rm.padron_id', 'ep.id')
+                    ->where('rm.evento_id', $this->eventoId)
+                    ->where('rm.es_cabeza', 0);
+            })
             ->orderBy('ep.inmueble')
             ->get([
                 'ep.inmueble',
@@ -714,29 +724,19 @@ class InformeAusentesSheet implements FromArray, WithTitle, \Maatwebsite\Excel\C
                 'ep.correo_asistente',
             ]);
 
-        $count = 0;
-        $sumCoef = 0.0;
-
         foreach ($ausentes as $a) {
-            $coefRaw = (float) ($a->coeficiente ?? 0);
-            $sumCoef += $coefRaw;
-            $count++;
-
             $rows[] = [
                 $a->inmueble ?? '',
                 $a->propietario ?? '',
-                $coefRaw, // ✅ valor real, Excel muestra 2 decimales
+                (float) ($a->coeficiente ?? 0),
                 $a->asistente ?? '',
                 $a->celular_asistente ?? '',
                 $a->correo_asistente ?? '',
             ];
         }
 
-        // Totales
         $rows[] = [''];
-        /*         $rows[] = ['TOTAL AUSENTES:', $count, round($sumCoef, 2)]; */
 
         return $rows;
     }
 }
-
