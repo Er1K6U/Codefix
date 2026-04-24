@@ -6,6 +6,8 @@ use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Concerns\FromArray;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class InformeAsambleaExport implements WithMultipleSheets
@@ -27,6 +29,11 @@ class InformeAsambleaExport implements WithMultipleSheets
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// RESUMEN
+// Filas: 1=título  2=Evento  3=Generado  4=vacía  5=RESUMEN GENERAL
+//        6-9=datos  10=total
+// ─────────────────────────────────────────────────────────────────────────────
 class InformeResumenSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Concerns\WithColumnFormatting, \Maatwebsite\Excel\Concerns\WithStyles
 {
     public function __construct(public int $eventoId)
@@ -128,20 +135,40 @@ class InformeResumenSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Co
             ['Coeficiente retirado (RETIRADO):', $coefRetirado],
             ['Coeficiente no asistió:', $coefNoAsistio],
             ['Coeficiente total (presente + retirado + no asistió):', $coefTotal],
-            [''],
-            ['Notas:'],
-            ['- "Controles activos" se muestra como valor nominal (sin decimales).'],
-            ['- "Coeficiente no asistió" corresponde a inmuebles que no tienen CHECKED_IN ni RETIRADO.'],
-            ['- El total esperado debe aproximarse a 100.00 en bases porcentuales.'],
         ];
     }
 
     public function styles(Worksheet $sheet)
     {
-        // B6 = valor de "Controles activos"
-        $sheet->getStyle('B6')
-            ->getNumberFormat()
-            ->setFormatCode('0');
+        // B6 = valor de "Controles activos" — mostrar como entero
+        $sheet->getStyle('B6')->getNumberFormat()->setFormatCode('0');
+
+        // Título (A1:B1) — centrado
+        $sheet->mergeCells('A1:B1');
+        $sheet->getRowDimension(1)->setRowHeight(24);
+        $sheet->getStyle('A1')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FF1F3864');
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14)->getColor()->setARGB('FFFFFFFF');
+        $sheet->getStyle('A1')->getAlignment()
+            ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+            ->setVertical(Alignment::VERTICAL_CENTER);
+
+        // Encabezado de sección (fila 5)
+        $sheet->getStyle('A5:B5')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FF2E75B6');
+        $sheet->getStyle('A5:B5')->getFont()->setBold(true)->getColor()->setARGB('FFFFFFFF');
+        $sheet->getStyle('A5:B5')->getAlignment()->setWrapText(true);
+
+        // Filas de datos (6–10)
+        $sheet->getStyle('A6:B10')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFEFF6FF');
+        $sheet->getStyle('A6:B10')->getBorders()->getAllBorders()->setBorderStyle('thin');
+        $sheet->getStyle('A6:B10')->getAlignment()->setWrapText(true);
+
+        // Fila total (10)
+        $sheet->getStyle('A10:B10')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFDDEBF7');
+        $sheet->getStyle('A10:B10')->getFont()->setBold(true);
+
+        // Anchos de columna
+        $sheet->getColumnDimension('A')->setWidth(52);
+        $sheet->getColumnDimension('B')->setWidth(14);
 
         return [];
     }
@@ -156,7 +183,12 @@ class InformeResumenSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Co
     }
 }
 
-class InformeQuorumSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Concerns\WithColumnFormatting
+// ─────────────────────────────────────────────────────────────────────────────
+// QUÓRUM
+// Filas: 1=título  2=vacía  3-5=resumen  6=vacía
+//        7=PRESENTES  8=encab.tabla  9+=datos  ...  RETIRADOS (dinámico)
+// ─────────────────────────────────────────────────────────────────────────────
+class InformeQuorumSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Concerns\WithColumnFormatting, \Maatwebsite\Excel\Concerns\WithStyles
 {
     public function __construct(public int $eventoId)
     {
@@ -227,7 +259,6 @@ class InformeQuorumSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Con
 
         $rows = [];
         $rows[] = ['QUÓRUM (SNAPSHOT ACTUAL)'];
-        $rows[] = ['Calculado con el último estado válido por inmueble. Presente = CHECKED_IN.'];
         $rows[] = [''];
 
         $rows[] = ['Coeficiente presente (CHECKED_IN):', $coefPresente];
@@ -251,6 +282,83 @@ class InformeQuorumSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Con
         return $rows;
     }
 
+    public function styles(Worksheet $sheet)
+    {
+        $lastRow = $sheet->getHighestRow();
+
+        // Título (A1:C1) — centrado
+        $sheet->mergeCells('A1:C1');
+        $sheet->getRowDimension(1)->setRowHeight(24);
+        $sheet->getStyle('A1')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FF1F3864');
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14)->getColor()->setARGB('FFFFFFFF');
+        $sheet->getStyle('A1')->getAlignment()
+            ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+            ->setVertical(Alignment::VERTICAL_CENTER);
+
+        // Filas de resumen (3–5)
+        $sheet->getStyle('A3:B5')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFEFF6FF');
+        $sheet->getStyle('A3:B5')->getBorders()->getAllBorders()->setBorderStyle('thin');
+        $sheet->getStyle('A3:B5')->getAlignment()->setWrapText(true);
+
+        // Encabezado sección PRESENTES (fila 7 — fija)
+        $sheet->getStyle('A7:C7')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FF2E75B6');
+        $sheet->getStyle('A7:C7')->getFont()->setBold(true)->getColor()->setARGB('FFFFFFFF');
+
+        // Encabezado tabla PRESENTES (fila 8 — fija)
+        $sheet->getRowDimension(8)->setRowHeight(18);
+        $sheet->getStyle('A8:C8')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFD6E4F0');
+        $sheet->getStyle('A8:C8')->getFont()->setBold(true);
+        $sheet->getStyle('A8:C8')->getBorders()->getAllBorders()->setBorderStyle('thin');
+        $sheet->getStyle('A8:C8')->getAlignment()->setWrapText(true);
+
+        // Buscar fila RETIRADOS dinámicamente
+        $retiradosRow = null;
+        for ($r = 9; $r <= $lastRow; $r++) {
+            if ($sheet->getCell("A{$r}")->getValue() === 'RETIRADOS') {
+                $retiradosRow = $r;
+                break;
+            }
+        }
+
+        // Datos PRESENTES (fila 9 hasta antes del separador vacío)
+        if ($retiradosRow && $retiradosRow > 10) {
+            $presentesDataEnd = $retiradosRow - 2;
+            if ($presentesDataEnd >= 9) {
+                $sheet->getStyle("A9:C{$presentesDataEnd}")->getBorders()->getAllBorders()->setBorderStyle('thin');
+                $sheet->getStyle("A9:C{$presentesDataEnd}")->getAlignment()->setWrapText(true);
+            }
+        }
+
+        // Sección RETIRADOS (dinámica)
+        if ($retiradosRow) {
+            $sheet->getStyle("A{$retiradosRow}:C{$retiradosRow}")
+                ->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FF2E75B6');
+            $sheet->getStyle("A{$retiradosRow}:C{$retiradosRow}")
+                ->getFont()->setBold(true)->getColor()->setARGB('FFFFFFFF');
+
+            $retHeaderRow = $retiradosRow + 1;
+            $sheet->getRowDimension($retHeaderRow)->setRowHeight(18);
+            $sheet->getStyle("A{$retHeaderRow}:C{$retHeaderRow}")
+                ->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFD6E4F0');
+            $sheet->getStyle("A{$retHeaderRow}:C{$retHeaderRow}")->getFont()->setBold(true);
+            $sheet->getStyle("A{$retHeaderRow}:C{$retHeaderRow}")->getBorders()->getAllBorders()->setBorderStyle('thin');
+            $sheet->getStyle("A{$retHeaderRow}:C{$retHeaderRow}")->getAlignment()->setWrapText(true);
+
+            $retDataStart = $retHeaderRow + 1;
+            if ($retDataStart <= $lastRow) {
+                $sheet->getStyle("A{$retDataStart}:C{$lastRow}")->getBorders()->getAllBorders()->setBorderStyle('thin');
+                $sheet->getStyle("A{$retDataStart}:C{$lastRow}")->getAlignment()->setWrapText(true);
+            }
+        }
+
+        // Anchos de columna
+        $sheet->getColumnDimension('A')->setWidth(22);
+        $sheet->getColumnDimension('B')->setWidth(30);
+        $sheet->getColumnDimension('C')->setWidth(12);
+
+        return [];
+    }
+
     private function coefReal($value): float
     {
         if ($value === null || $value === '') {
@@ -261,7 +369,11 @@ class InformeQuorumSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Con
     }
 }
 
-class InformeAsistenciaSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Concerns\WithColumnFormatting
+// ─────────────────────────────────────────────────────────────────────────────
+// ASISTENCIA
+// Filas: 1=título  2=vacía  3=encab.tabla  4+=datos
+// ─────────────────────────────────────────────────────────────────────────────
+class InformeAsistenciaSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Concerns\WithColumnFormatting, \Maatwebsite\Excel\Concerns\WithStyles
 {
     public function __construct(public int $eventoId)
     {
@@ -275,7 +387,7 @@ class InformeAsistenciaSheet implements FromArray, WithTitle, \Maatwebsite\Excel
     public function columnFormats(): array
     {
         return [
-            'E' => '0.00',
+            'H' => '0.00',
         ];
     }
 
@@ -284,9 +396,8 @@ class InformeAsistenciaSheet implements FromArray, WithTitle, \Maatwebsite\Excel
         $rows = [];
 
         $rows[] = ['ASISTENCIA (BASE TURNING)'];
-        $rows[] = ['Listado consolidado por inmueble cabeza. Incluye CHECKED_IN y RETIRADO.'];
         $rows[] = [''];
-        $rows[] = ['# Control', 'Código', 'Inmueble cabeza', 'Propietario', 'Coef', 'Estado', 'Hora check-in', 'Hora retiro', 'Hora reingreso'];
+        $rows[] = ['# Control', 'Código', 'Inmueble cabeza', 'Propietario', 'Asistente', 'Teléfono', 'Correo', 'Coef', 'Estado', 'Hora check-in', 'Hora retiro', 'Hora reingreso'];
 
         $lastPerInmueble = DB::table('registros_checkin')
             ->selectRaw('MAX(id) as last_id')
@@ -315,6 +426,9 @@ class InformeAsistenciaSheet implements FromArray, WithTitle, \Maatwebsite\Excel
                 'rc.control_serial_snapshot',
                 'rc.coef_total_snapshot',
                 'rc.cabeza_inmueble_snapshot',
+                'rc.asistente_nombre',
+                'rc.asistente_telefono',
+                'rc.asistente_correo',
                 'rc.checked_in_at',
                 'rc.retirado_at',
                 'rc.reingreso_at',
@@ -329,6 +443,9 @@ class InformeAsistenciaSheet implements FromArray, WithTitle, \Maatwebsite\Excel
             $codigo = $it->control_serial_snapshot ?? ($it->control_serial_db ?? '');
             $inmuebleCabeza = $it->cabeza_inmueble_snapshot ?: ($it->inmueble_padron ?? '');
             $propietario = $it->propietario_padron ?? '';
+            $asistente = $it->asistente_nombre ?? '';
+            $telefono = $it->asistente_telefono ?? '';
+            $correo = $it->asistente_correo ?? '';
             $coefRaw = (float) ($it->coef_total_snapshot ?? 0);
 
             $rows[] = [
@@ -336,6 +453,9 @@ class InformeAsistenciaSheet implements FromArray, WithTitle, \Maatwebsite\Excel
                 $codigo,
                 $inmuebleCabeza,
                 $propietario,
+                $asistente,
+                $telefono,
+                $correo,
                 $coefRaw,
                 $it->estado,
                 $this->fmtHora($it->checked_in_at ?? null),
@@ -345,6 +465,52 @@ class InformeAsistenciaSheet implements FromArray, WithTitle, \Maatwebsite\Excel
         }
 
         return $rows;
+    }
+
+    public function styles(Worksheet $sheet)
+    {
+        $lastRow = $sheet->getHighestRow();
+
+        // Título (A1:L1) — centrado
+        $sheet->mergeCells('A1:L1');
+        $sheet->getRowDimension(1)->setRowHeight(24);
+        $sheet->getStyle('A1')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FF1F3864');
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14)->getColor()->setARGB('FFFFFFFF');
+        $sheet->getStyle('A1')->getAlignment()
+            ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+            ->setVertical(Alignment::VERTICAL_CENTER);
+
+        // Encabezado de tabla (fila 3)
+        $sheet->getRowDimension(3)->setRowHeight(18);
+        $sheet->getStyle('A3:L3')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFD6E4F0');
+        $sheet->getStyle('A3:L3')->getFont()->setBold(true);
+        $sheet->getStyle('A3:L3')->getBorders()->getAllBorders()->setBorderStyle('thin');
+        $sheet->getStyle('A3:L3')->getAlignment()->setWrapText(true);
+
+        // Filas de datos (4+)
+        if ($lastRow >= 4) {
+            $sheet->getStyle("A4:L{$lastRow}")->getBorders()->getAllBorders()->setBorderStyle('thin');
+            $sheet->getStyle("A4:L{$lastRow}")->getAlignment()->setWrapText(true);
+        }
+
+        // Inmovilizar desde fila 4
+        $sheet->freezePane('A4');
+
+        // Anchos de columna
+        $sheet->getColumnDimension('A')->setWidth(10);
+        $sheet->getColumnDimension('B')->setWidth(12);
+        $sheet->getColumnDimension('C')->setWidth(18);
+        $sheet->getColumnDimension('D')->setWidth(25);
+        $sheet->getColumnDimension('E')->setWidth(25);
+        $sheet->getColumnDimension('F')->setWidth(15);
+        $sheet->getColumnDimension('G')->setWidth(28);
+        $sheet->getColumnDimension('H')->setWidth(10);
+        $sheet->getColumnDimension('I')->setWidth(12);
+        $sheet->getColumnDimension('J')->setWidth(22);
+        $sheet->getColumnDimension('K')->setWidth(22);
+        $sheet->getColumnDimension('L')->setWidth(22);
+
+        return [];
     }
 
     private function coefReal($value): float
@@ -371,7 +537,11 @@ class InformeAsistenciaSheet implements FromArray, WithTitle, \Maatwebsite\Excel
     }
 }
 
-class InformePoderesSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Concerns\WithColumnFormatting
+// ─────────────────────────────────────────────────────────────────────────────
+// PODERES
+// Filas: 1=título  2=vacía  3=encab.tabla  4+=datos  última-1=vacía  última=TOTAL
+// ─────────────────────────────────────────────────────────────────────────────
+class InformePoderesSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Concerns\WithColumnFormatting, \Maatwebsite\Excel\Concerns\WithStyles
 {
     public function __construct(public int $eventoId)
     {
@@ -396,8 +566,6 @@ class InformePoderesSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Co
         $rows = [];
 
         $rows[] = ['PODERES / REPRESENTACIONES'];
-        $rows[] = ['Consolidado por "unidades de voto": solo cabezas que NO están representadas por otro inmueble.'];
-        $rows[] = ['(Así el total no supera 100%)'];
         $rows[] = [''];
 
         $rows[] = [
@@ -518,6 +686,67 @@ class InformePoderesSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Co
         return $rows;
     }
 
+    public function styles(Worksheet $sheet)
+    {
+        $lastRow = $sheet->getHighestRow();
+
+        // Título (A1:I1) — centrado
+        $sheet->mergeCells('A1:I1');
+        $sheet->getRowDimension(1)->setRowHeight(24);
+        $sheet->getStyle('A1')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FF1F3864');
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14)->getColor()->setARGB('FFFFFFFF');
+        $sheet->getStyle('A1')->getAlignment()
+            ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+            ->setVertical(Alignment::VERTICAL_CENTER);
+
+        // Encabezado de tabla (fila 3)
+        $sheet->getRowDimension(3)->setRowHeight(18);
+        $sheet->getStyle('A3:I3')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFD6E4F0');
+        $sheet->getStyle('A3:I3')->getFont()->setBold(true);
+        $sheet->getStyle('A3:I3')->getBorders()->getAllBorders()->setBorderStyle('thin');
+        $sheet->getStyle('A3:I3')->getAlignment()->setWrapText(true);
+
+        // Buscar fila TOTAL dinámicamente
+        $totalRow = null;
+        for ($r = 4; $r <= $lastRow; $r++) {
+            if ($sheet->getCell("A{$r}")->getValue() === 'TOTAL') {
+                $totalRow = $r;
+                break;
+            }
+        }
+
+        // Filas de datos (4 hasta antes de la fila vacía que precede a TOTAL)
+        $dataEnd = $totalRow ? $totalRow - 2 : $lastRow;
+        if ($dataEnd >= 4) {
+            $sheet->getStyle("A4:I{$dataEnd}")->getBorders()->getAllBorders()->setBorderStyle('thin');
+            $sheet->getStyle("A4:I{$dataEnd}")->getAlignment()->setWrapText(true);
+        }
+
+        // Fila TOTAL
+        if ($totalRow) {
+            $sheet->getStyle("A{$totalRow}:I{$totalRow}")
+                ->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFDDEBF7');
+            $sheet->getStyle("A{$totalRow}:I{$totalRow}")->getFont()->setBold(true);
+            $sheet->getStyle("A{$totalRow}:I{$totalRow}")->getBorders()->getAllBorders()->setBorderStyle('thin');
+        }
+
+        // Inmovilizar desde fila 4
+        $sheet->freezePane('A4');
+
+        // Anchos de columna
+        $sheet->getColumnDimension('A')->setWidth(18);
+        $sheet->getColumnDimension('B')->setWidth(28);
+        $sheet->getColumnDimension('C')->setWidth(10);
+        $sheet->getColumnDimension('D')->setWidth(12);
+        $sheet->getColumnDimension('E')->setWidth(12);
+        $sheet->getColumnDimension('F')->setWidth(12);
+        $sheet->getColumnDimension('G')->setWidth(12);
+        $sheet->getColumnDimension('H')->setWidth(10);
+        $sheet->getColumnDimension('I')->setWidth(14);
+
+        return [];
+    }
+
     private function coefReal($value): float
     {
         if ($value === null || $value === '') {
@@ -528,6 +757,10 @@ class InformePoderesSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Co
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// PODERES DETALLE
+// Filas: 1=título  2=vacía  3=encab.tabla  4+=bloques dinámicos
+// ─────────────────────────────────────────────────────────────────────────────
 class InformePoderesDetalleSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Concerns\WithColumnFormatting, \Maatwebsite\Excel\Concerns\WithStyles
 {
     public function __construct(public int $eventoId)
@@ -556,7 +789,6 @@ class InformePoderesDetalleSheet implements FromArray, WithTitle, \Maatwebsite\E
         $rows = [];
 
         $rows[] = ['PODERES · DETALLE POR CABEZA'];
-        $rows[] = ['Listado de apoderados agrupados por inmueble cabeza.'];
         $rows[] = [''];
 
         $rows[] = ['Cabeza (inmueble)', 'Propietario cabeza', 'Coef cabeza', 'Apoderado (inmueble)', 'Apoderado (propietario)', 'Coef apoderado'];
@@ -626,14 +858,27 @@ class InformePoderesDetalleSheet implements FromArray, WithTitle, \Maatwebsite\E
 
     public function styles(Worksheet $sheet)
     {
-        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
+        $lastRow = $sheet->getHighestRow();
 
-        $sheet->getStyle('A4:F4')->getFont()->setBold(true);
-        $sheet->getStyle('A4:F4')->getBorders()->getBottom()->setBorderStyle('thin');
+        // Título (A1:F1) — centrado
+        $sheet->mergeCells('A1:F1');
+        $sheet->getRowDimension(1)->setRowHeight(24);
+        $sheet->getStyle('A1')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FF1F3864');
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14)->getColor()->setARGB('FFFFFFFF');
+        $sheet->getStyle('A1')->getAlignment()
+            ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+            ->setVertical(Alignment::VERTICAL_CENTER);
+
+        // Encabezado de tabla (fila 3)
+        $sheet->getRowDimension(3)->setRowHeight(18);
+        $sheet->getStyle('A3:F3')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFD6E4F0');
+        $sheet->getStyle('A3:F3')->getFont()->setBold(true);
+        $sheet->getStyle('A3:F3')->getBorders()->getBottom()->setBorderStyle('thin');
+        $sheet->getStyle('A3:F3')->getAlignment()->setWrapText(true);
 
         foreach (range('A', 'F') as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
-            $sheet->freezePane('A5');
+            $sheet->freezePane('A4');
         }
 
         foreach ($this->blocks as [$start, $end]) {
@@ -648,9 +893,9 @@ class InformePoderesDetalleSheet implements FromArray, WithTitle, \Maatwebsite\E
 
             $sheet->getStyle("A{$start}:F{$start}")
                 ->getFill()
-                ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                ->setFillType(Fill::FILL_SOLID)
                 ->getStartColor()
-                ->setARGB('FFF2F2F2');
+                ->setARGB('FFBDD7EE');
 
             for ($r = $start; $r <= $end; $r++) {
                 $val = $sheet->getCell("E{$r}")->getValue();
@@ -665,11 +910,20 @@ class InformePoderesDetalleSheet implements FromArray, WithTitle, \Maatwebsite\E
             }
         }
 
+        // wrapText en filas de datos
+        if ($lastRow >= 4) {
+            $sheet->getStyle("A4:F{$lastRow}")->getAlignment()->setWrapText(true);
+        }
+
         return [];
     }
 }
 
-class InformeAusentesSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Concerns\WithColumnFormatting
+// ─────────────────────────────────────────────────────────────────────────────
+// AUSENTES
+// Filas: 1=título  2=vacía  3=encab.tabla  4+=datos  última=vacía
+// ─────────────────────────────────────────────────────────────────────────────
+class InformeAusentesSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Concerns\WithColumnFormatting, \Maatwebsite\Excel\Concerns\WithStyles
 {
     public function __construct(public int $eventoId)
     {
@@ -692,7 +946,6 @@ class InformeAusentesSheet implements FromArray, WithTitle, \Maatwebsite\Excel\C
         $rows = [];
 
         $rows[] = ['AUSENTES (NO REGISTRADOS)'];
-        $rows[] = ['Inmuebles del padrón que NO tienen check-in válido y que tampoco quedaron representados como poder.'];
         $rows[] = [''];
 
         $rows[] = ['Inmueble', 'Propietario', 'Coeficiente', 'Asistente', 'Celular', 'Correo'];
@@ -737,5 +990,45 @@ class InformeAusentesSheet implements FromArray, WithTitle, \Maatwebsite\Excel\C
         $rows[] = [''];
 
         return $rows;
+    }
+
+    public function styles(Worksheet $sheet)
+    {
+        $lastRow = $sheet->getHighestRow();
+
+        // Título (A1:F1) — centrado
+        $sheet->mergeCells('A1:F1');
+        $sheet->getRowDimension(1)->setRowHeight(24);
+        $sheet->getStyle('A1')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FF1F3864');
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14)->getColor()->setARGB('FFFFFFFF');
+        $sheet->getStyle('A1')->getAlignment()
+            ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+            ->setVertical(Alignment::VERTICAL_CENTER);
+
+        // Encabezado de tabla (fila 3)
+        $sheet->getRowDimension(3)->setRowHeight(18);
+        $sheet->getStyle('A3:F3')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFD6E4F0');
+        $sheet->getStyle('A3:F3')->getFont()->setBold(true);
+        $sheet->getStyle('A3:F3')->getBorders()->getAllBorders()->setBorderStyle('thin');
+        $sheet->getStyle('A3:F3')->getAlignment()->setWrapText(true);
+
+        // Filas de datos (4+)
+        if ($lastRow >= 4) {
+            $sheet->getStyle("A4:F{$lastRow}")->getBorders()->getAllBorders()->setBorderStyle('thin');
+            $sheet->getStyle("A4:F{$lastRow}")->getAlignment()->setWrapText(true);
+        }
+
+        // Inmovilizar desde fila 4
+        $sheet->freezePane('A4');
+
+        // Anchos de columna
+        $sheet->getColumnDimension('A')->setWidth(18);
+        $sheet->getColumnDimension('B')->setWidth(28);
+        $sheet->getColumnDimension('C')->setWidth(12);
+        $sheet->getColumnDimension('D')->setWidth(28);
+        $sheet->getColumnDimension('E')->setWidth(16);
+        $sheet->getColumnDimension('F')->setWidth(28);
+
+        return [];
     }
 }
