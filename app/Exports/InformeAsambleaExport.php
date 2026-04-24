@@ -93,7 +93,7 @@ class InformeResumenSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Co
             ->count('control_id');
 
         // Coeficiente no asistió:
-        // padrón que no tuvo check-in válido y tampoco quedó representado como poder
+        // inmuebles sin CHECKED_IN ni RETIRADO y que además no quedaron representados como poder
         $coefNoAsistio = (float) DB::table('evento_padron as ep')
             ->where('ep.evento_id', $this->eventoId)
             ->whereNotExists(function ($q) {
@@ -114,7 +114,7 @@ class InformeResumenSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Co
 
         $coefNoAsistio = round($coefNoAsistio, 2);
 
-        // Total correcto del evento
+        // Total del evento
         $coefTotal = round($coefPresente + $coefRetirado + $coefNoAsistio, 2);
 
         return [
@@ -131,7 +131,7 @@ class InformeResumenSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Co
             [''],
             ['Notas:'],
             ['- "Controles activos" se muestra como valor nominal (sin decimales).'],
-            ['- "Coeficiente no asistió" corresponde a inmuebles sin check-in válido y no representados como poder.'],
+            ['- "Coeficiente no asistió" corresponde a inmuebles que no tienen CHECKED_IN ni RETIRADO.'],
             ['- El total esperado debe aproximarse a 100.00 en bases porcentuales.'],
         ];
     }
@@ -363,9 +363,8 @@ class InformeAsistenciaSheet implements FromArray, WithTitle, \Maatwebsite\Excel
         }
 
         try {
-            return \Carbon\Carbon::parse($dt, 'UTC')
-                ->setTimezone(config('app.timezone'))
-                ->format('Y-m-d H:i:s');
+            return \Carbon\Carbon::parse($dt)
+                ->format('Y-m-d h:i:s A');
         } catch (\Throwable $e) {
             return (string) $dt;
         }
