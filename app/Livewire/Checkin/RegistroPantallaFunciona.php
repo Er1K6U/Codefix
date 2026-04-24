@@ -259,7 +259,6 @@ class RegistroPantalla extends Component
         $this->search = '';
         $this->results = [];
     }
-
     private function resolveCheckinTarget(int $requestedPadronId): array
     {
         if (!$this->eventoId) {
@@ -328,10 +327,10 @@ class RegistroPantalla extends Component
                 DB::table('representacion_miembros')
                     ->where('id', $miembroGlobal->id)
                     ->update([
-                        'grupo_id' => $gid,
-                        'es_cabeza' => 1,
-                        'updated_at' => now(),
-                    ]);
+                            'grupo_id' => $gid,
+                            'es_cabeza' => 1,
+                            'updated_at' => now(),
+                        ]);
 
                 $this->grupoId = (int) $gid;
 
@@ -348,9 +347,9 @@ class RegistroPantalla extends Component
                     ->where('id', $this->grupoId)
                     ->where('evento_id', $this->eventoId)
                     ->update([
-                        'cabeza_padron_id' => $padronId,
-                        'updated_at' => now(),
-                    ]);
+                            'cabeza_padron_id' => $padronId,
+                            'updated_at' => now(),
+                        ]);
 
                 $headPadronId = $padronId;
             }
@@ -697,60 +696,6 @@ class RegistroPantalla extends Component
             return false;
         }
     }
-
-    /**
-     * ✅ Recalcula el snapshot del grupo actual si la cabeza ya tiene registro válido.
-     * Esto evita desfases cuando agregan/quitan poderes después del check-in.
-     */
-    private function syncGrupoSnapshot(int $grupoId): void
-    {
-        if (!$this->eventoId || $grupoId <= 0) {
-            return;
-        }
-
-        $grupo = DB::table('representacion_grupos')
-            ->where('evento_id', $this->eventoId)
-            ->where('id', $grupoId)
-            ->first(['id', 'cabeza_padron_id']);
-
-        if (!$grupo || empty($grupo->cabeza_padron_id)) {
-            return;
-        }
-
-        $headPadronId = (int) $grupo->cabeza_padron_id;
-
-        $head = DB::table('evento_padron')
-            ->where('evento_id', $this->eventoId)
-            ->where('id', $headPadronId)
-            ->first(['inmueble']);
-
-        if (!$head) {
-            return;
-        }
-
-        $miembros = DB::table('representacion_miembros as rm')
-            ->join('evento_padron as ep', 'ep.id', '=', 'rm.padron_id')
-            ->where('rm.evento_id', $this->eventoId)
-            ->where('rm.grupo_id', $grupoId)
-            ->get(['ep.coeficiente']);
-
-        $coefTotal = 0.0;
-        foreach ($miembros as $m) {
-            $coefTotal += (float) ($m->coeficiente ?? 0);
-        }
-
-        DB::table('registros_checkin')
-            ->where('evento_id', $this->eventoId)
-            ->where('inmueble_base_id', $headPadronId)
-            ->whereIn('estado', ['CHECKED_IN', 'RETIRADO'])
-            ->update([
-                'grupo_id' => $grupoId,
-                'coef_total_snapshot' => $coefTotal,
-                'cabeza_inmueble_snapshot' => (string) $head->inmueble,
-                'updated_at' => now(),
-            ]);
-    }
-
     public function addPoder(int $padronId): void
     {
         $this->poderError = null;
@@ -766,8 +711,6 @@ class RegistroPantalla extends Component
             $this->poderError = 'Ese inmueble ya es la cabeza del grupo.';
             return;
         }
-
-        $targetGrupoId = (int) $this->grupoId;
 
         $result = DB::transaction(function () use ($padronId) {
 
@@ -852,10 +795,10 @@ class RegistroPantalla extends Component
                         ->where('evento_id', $this->eventoId)
                         ->where('id', $exists->id)
                         ->update([
-                            'grupo_id' => $this->grupoId,
-                            'es_cabeza' => 0,
-                            'updated_at' => now(),
-                        ]);
+                                'grupo_id' => $this->grupoId,
+                                'es_cabeza' => 0,
+                                'updated_at' => now(),
+                            ]);
 
                     return ['status' => 'moved_from_base'];
                 }
@@ -911,14 +854,12 @@ class RegistroPantalla extends Component
         }
 
         if (in_array(($result['status'] ?? null), ['inserted', 'moved_from_base'], true)) {
-            $this->syncGrupoSnapshot($targetGrupoId);
             $this->poderMsg = '✅ Poder anexado correctamente.';
         } elseif (($result['status'] ?? null) === 'already_in_group') {
             $this->poderMsg = 'ℹ️ Ese inmueble ya pertenece a este grupo.';
         } else {
             $this->poderError = 'No se pudo anexar el poder.';
         }
-
         if (in_array(($result['status'] ?? null), ['inserted', 'moved_from_base'], true)) {
             $this->dirtyGrupo = true;
         }
@@ -927,6 +868,7 @@ class RegistroPantalla extends Component
         $this->poderResults = [];
         $this->loadMiembros();
     }
+
 
     public function removePoder(int $miembroId): void
     {
@@ -990,20 +932,20 @@ class RegistroPantalla extends Component
                         DB::table('controles')
                             ->where('id', $control->id)
                             ->update([
-                                'estado' => 'LIBRE',
-                                'asignado_a_registro_id' => null,
-                                'updated_at' => now(),
-                            ]);
+                                    'estado' => 'LIBRE',
+                                    'asignado_a_registro_id' => null,
+                                    'updated_at' => now(),
+                                ]);
                     }
 
                     // Limpiar control del registro del poder
                     DB::table('registros_checkin')
                         ->where('id', $regPoder->id)
                         ->update([
-                            'control_id' => null,
-                            'control_numero_snapshot' => null,
-                            'updated_at' => now(),
-                        ]);
+                                'control_id' => null,
+                                'control_numero_snapshot' => null,
+                                'updated_at' => now(),
+                            ]);
 
                     // refrescar objeto (por coherencia en lo que sigue)
                     $regPoder = DB::table('registros_checkin')
@@ -1048,19 +990,19 @@ class RegistroPantalla extends Component
                     ->where('evento_id', $eventoId)
                     ->where('id', $m->id)
                     ->update([
-                        'grupo_id' => $grupoBaseId,
-                        'es_cabeza' => 1,
-                        'updated_at' => now(),
-                    ]);
+                            'grupo_id' => $grupoBaseId,
+                            'es_cabeza' => 1,
+                            'updated_at' => now(),
+                        ]);
 
                 // 5) Saneo: ese grupo base debe tener como cabeza_padron_id al padronId
                 DB::table('representacion_grupos')
                     ->where('evento_id', $eventoId)
                     ->where('id', $grupoBaseId)
                     ->update([
-                        'cabeza_padron_id' => $padronId,
-                        'updated_at' => now(),
-                    ]);
+                            'cabeza_padron_id' => $padronId,
+                            'updated_at' => now(),
+                        ]);
 
                 // 6) ✅ Reset total del check-in del poder (queda “en cero”)
                 $reset = [
@@ -1113,8 +1055,6 @@ class RegistroPantalla extends Component
                 $this->poderError = $out['msg'] ?? 'No fue posible quitar el poder.';
                 return;
             }
-
-            $this->syncGrupoSnapshot((int) $out['grupo_actual_id']);
 
             $inm = $this->labelInmueble((int) $out['padron_id']);
 
@@ -1230,9 +1170,9 @@ class RegistroPantalla extends Component
                     ->where('id', $grupoId)
                     ->where('evento_id', $eventoId)
                     ->update([
-                        'cabeza_padron_id' => $newHeadPadronId,
-                        'updated_at' => now(),
-                    ]);
+                            'cabeza_padron_id' => $newHeadPadronId,
+                            'updated_at' => now(),
+                        ]);
 
                 DB::table('representacion_miembros')
                     ->where('evento_id', $eventoId)
@@ -1301,27 +1241,27 @@ class RegistroPantalla extends Component
                             ->where('id', $newRegistro->id)
                             ->where('evento_id', $eventoId)
                             ->update([
-                                'control_id' => $control->id,
-                                'control_numero_snapshot' => $control->numero,
-                                'updated_at' => now(),
-                            ]);
+                                    'control_id' => $control->id,
+                                    'control_numero_snapshot' => $control->numero,
+                                    'updated_at' => now(),
+                                ]);
 
                         DB::table('controles')
                             ->where('id', $control->id)
                             ->update([
-                                'estado' => 'ASIGNADO',
-                                'asignado_a_registro_id' => $newRegistro->id,
-                                'updated_at' => now(),
-                            ]);
+                                    'estado' => 'ASIGNADO',
+                                    'asignado_a_registro_id' => $newRegistro->id,
+                                    'updated_at' => now(),
+                                ]);
 
                         DB::table('registros_checkin')
                             ->where('id', $oldRegistro->id)
                             ->where('evento_id', $eventoId)
                             ->update([
-                                'control_id' => null,
-                                'control_numero_snapshot' => null,
-                                'updated_at' => now(),
-                            ]);
+                                    'control_id' => null,
+                                    'control_numero_snapshot' => null,
+                                    'updated_at' => now(),
+                                ]);
                     }
                 }
 
@@ -1362,10 +1302,10 @@ class RegistroPantalla extends Component
                     ->where('evento_id', $eventoId)
                     ->where('padron_id', $oldHeadPadronId)
                     ->update([
-                        'grupo_id' => $newBaseGroupId,
-                        'es_cabeza' => 1,
-                        'updated_at' => now(),
-                    ]);
+                            'grupo_id' => $newBaseGroupId,
+                            'es_cabeza' => 1,
+                            'updated_at' => now(),
+                        ]);
 
                 if ($oldRegistro) {
                     DB::table('registros_checkin')
@@ -1379,8 +1319,6 @@ class RegistroPantalla extends Component
                     'old_head' => $oldHeadPadronId,
                     'new_head' => $newHeadPadronId,
                     'control_num' => $controlNum,
-                    'grupo_id' => $grupoId,
-                    'new_base_group_id' => $newBaseGroupId,
                 ];
             });
 
@@ -1388,9 +1326,6 @@ class RegistroPantalla extends Component
                 $this->checkinError = $out['msg'] ?? 'No fue posible separar la cabeza.';
                 return;
             }
-
-            $this->syncGrupoSnapshot((int) $out['grupo_id']);
-            $this->syncGrupoSnapshot((int) $out['new_base_group_id']);
 
             $old = $this->labelInmueble((int) $out['old_head']);
             $new = $this->labelInmueble((int) $out['new_head']);
@@ -1493,17 +1428,17 @@ class RegistroPantalla extends Component
                 ->where('id', $this->registroId)
                 ->where('evento_id', $this->eventoId)
                 ->update([
-                    'asistente_nombre' => $this->asistenteNombre,
-                    'asistente_telefono' => $this->asistenteTelefono,
-                    'asistente_correo' => $this->asistenteCorreo,
-                    'checked_in_at' => now(),
-                    'checked_in_by_user_id' => auth()->id(),
-                    'estado' => 'CHECKED_IN', // ✅ este estado lo vamos a usar para bloquear poderes
-                    // ✅ snapshots para quórum
-                    'coef_total_snapshot' => $this->coefTotal !== null ? (float) $this->coefTotal : null,
-                    'cabeza_inmueble_snapshot' => $this->inmuebleLabel ?: null,
-                    'updated_at' => now(),
-                ]);
+                        'asistente_nombre' => $this->asistenteNombre,
+                        'asistente_telefono' => $this->asistenteTelefono,
+                        'asistente_correo' => $this->asistenteCorreo,
+                        'checked_in_at' => now(),
+                        'checked_in_by_user_id' => auth()->id(),
+                        'estado' => 'CHECKED_IN', // ✅ este estado lo vamos a usar para bloquear poderes
+                        // ✅ snapshots para quórum
+                        'coef_total_snapshot' => $this->coefTotal !== null ? (float) $this->coefTotal : null,
+                        'cabeza_inmueble_snapshot' => $this->inmuebleLabel ?: null,
+                        'updated_at' => now(),
+                    ]);
 
             // Cargar control a variables UI
             $this->controlNumero = null;
