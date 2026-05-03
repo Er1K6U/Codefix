@@ -73,6 +73,7 @@ Route::middleware(['auth', 'verified', 'usuario.activo', 'evento.contexto'])->gr
 
     // Retiro controles
     Route::get('/controles/retiro', RetiroReingreso::class)
+        ->middleware(['evento.activo'])
         ->name('controles.retiro');
 
     // Quorum (max)
