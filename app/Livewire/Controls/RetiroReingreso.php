@@ -145,7 +145,7 @@ class RetiroReingreso extends Component
                     ->where('id', $registro->id)
                     ->update([
                         'estado' => 'RETIRADO',
-                        'retirado_at' => max(now(), $registro->checked_in_at ?? now()),
+                        'retirado_at' => now()->max(\Carbon\Carbon::parse($registro->checked_in_at ?? now())),
                         'retirado_by_user_id' => Auth::id(),
                         'updated_at' => now(),
                     ]);
