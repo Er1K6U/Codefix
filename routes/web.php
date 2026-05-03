@@ -25,11 +25,11 @@ use App\Livewire\Admin\Usuarios\Index as AdminUsuariosIndex;
 | so requests stay inside the app subfolder.
 */
 Livewire::setUpdateRoute(function ($handle) {
-    return Route::post('/_lw/update', $handle);
+    return Route::post('/_lw/update', $handle)->name('livewire.update');
 });
 
 Livewire::setScriptRoute(function ($handle) {
-    return Route::get('/_lw/livewire.js', $handle);
+    return Route::get('/_lw/livewire.js', $handle)->name('livewire.js');
 });
 
 /*
