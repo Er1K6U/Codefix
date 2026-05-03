@@ -33,19 +33,6 @@ class AppServiceProvider extends ServiceProvider
     {
         /*
         |--------------------------------------------------------------------------
-        | Livewire fix for subfolder installs (/Coefix/public)
-        |--------------------------------------------------------------------------
-        */
-        Livewire::setUpdateRoute(function ($handle) {
-            return Route::post('/_lw/update', $handle)->name('livewire.update');
-        });
-
-        Livewire::setScriptRoute(function ($handle) {
-            return Route::get('/_lw/livewire.js', $handle)->name('livewire.js');
-        });
-
-        /*
-        |--------------------------------------------------------------------------
         | Gates - permisos del sistema (DEFINITIVOS)
         |--------------------------------------------------------------------------
         */
