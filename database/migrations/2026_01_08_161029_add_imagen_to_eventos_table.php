@@ -5,31 +5,17 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::create('stations', function (Blueprint $table) {
-            $table->id();
-            $table->string('ip', 45)->unique(); // IP del PC (red local)
-            $table->string('nombre', 80)->nullable(); // "Puesto 1", "Mesa A", etc.
-            $table->foreignId('active_event_id')
-                ->nullable()
-                ->constrained('eventos')
-                ->nullOnDelete();
-
-            $table->timestamps();
-
-            $table->index('active_event_id');
+        Schema::table('eventos', function (Blueprint $table) {
+            $table->string('imagen')->nullable();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('stations');
+        Schema::table('eventos', function (Blueprint $table) {
+            $table->dropColumn('imagen');
+        });
     }
 };
