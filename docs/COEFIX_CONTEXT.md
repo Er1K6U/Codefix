@@ -1,6 +1,6 @@
 # COEFIX — Documento de Contexto de Trabajo
 
-> Última actualización: 2026-05-03 (sesión de auditoría + correcciones)
+> Última actualización: 2026-05-04 (cierre de tests + correcciones auth)
 > Rama activa: `develop`
 
 ---
@@ -33,7 +33,7 @@ registrar simultáneamente desde distintas PCs de la red local.
 | MySQL | 8 (Laragon local) |
 | Roles/Permisos | spatie/laravel-permission |
 | Exportación Excel | maatwebsite/laravel-excel + PhpSpreadsheet |
-| Tests | PHPUnit (suite rota — ver Riesgos) |
+| Tests | PHPUnit (23/23 tests pasan — suite verde) |
 
 **Colores de identidad visual:**
 - Azul petróleo: `#0F3D4C`
@@ -53,7 +53,7 @@ develop    ← rama de trabajo activa (HEAD actual)
 - Todo el desarrollo ocurre en `develop`.
 - Los PRs se hacen hacia `develop`.
 - `main` solo recibe merges de releases revisadas.
-- No hay CI/CD configurado (los tests están rotos).
+- No hay CI/CD configurado.
 
 ---
 
@@ -152,6 +152,30 @@ Las marcas de tiempo se almacenan usando `now()` con el timezone de la app.
 
 ## 6. Cambios Recientes Importantes
 
+### [2026-05-04] Suite de tests en verde — 23/23 pasan
+- Causa raíz de los fallos: FKs de SQLite requieren `PRAGMA foreign_keys = ON` y orden de creación correcto.
+- Migración `add_imagen_to_eventos_table`: columna `imagen` se agrega con `nullable()` para compatibilidad SQLite.
+- Migración `add_evento_id_to_representacion_miembros_table`: se adaptó para no duplicar la columna si ya existe (guard con `hasColumn`), compatible con SQLite in-memory de tests.
+- Commits: `fix: corregir migracion de imagen en eventos` + `fix: adaptar migracion de representacion para sqlite`.
+- Rama cerrada: `fix/tests-sqlite-foreign-keys` → mergeada a `develop`.
+
+### [2026-05-04] Desactivación de `/register` y limpieza de tests Breeze
+- La ruta `/register` no existe en Coefix (admins crean usuarios vía `/admin/usuarios`).
+- `RegistrationTest` eliminado — no tiene sentido en el dominio del sistema.
+- Tests restantes actualizados para reflejar el flujo real: `ExampleTest`, `AuthenticationTest`, `EmailVerificationTest`, `PasswordConfirmationTest`.
+- Rama cerrada: `fix/tests-breeze-desactualizados` → mergeada a `develop`.
+
+### [2026-05-04] Corrección de redirects de auth: `dashboard` → `eventos.index`
+- Los controladores de auth generados por Breeze referenciaban `route('dashboard')`, que nunca fue definido en Coefix.
+- Corregido en 4 controladores: `VerifyEmailController`, `ConfirmablePasswordController`, `EmailVerificationNotificationController`, `EmailVerificationPromptController`.
+- Todos redirigen ahora a `route('eventos.index')`, la pantalla de entrada autenticada real.
+- `RegisteredUserController` conserva la referencia rota pero es **dead code** — ninguna ruta apunta a él.
+
+### [2026-05-04] Eliminación de dead code `columnExists()`
+- Método privado en `RegistroPantalla.php` con SQL `SHOW COLUMNS FROM {$table}` (MySQL-only).
+- No era llamado desde ningún lugar. Eliminado con seguridad.
+- Commit: `chore: eliminar dead code columnExists`.
+
 ### [2026-05-03] Corrección de unique constraint en `representacion_miembros`
 - El `UNIQUE(padron_id)` original impedía que el mismo inmueble perteneciera a grupos de distintos eventos.
 - Se reemplazó por `UNIQUE(evento_id, padron_id)` — un inmueble solo puede estar en un grupo por evento.
@@ -227,20 +251,20 @@ La auditoría inicial asumió que `is_active` era un typo de `activo`. **Hallazg
 - El objeto `$evento` del singleton nunca es leído por `EventContext::eventoId()` (usa sesión); es dead code pero no un bug.
 **Acción:** ninguna. No hay bug.
 
-#### R2 — Suite de tests completamente rota
-24/25 tests fallan con `table "stations" already exists` en SQLite in-memory.
-`RefreshDatabase` no puede limpiar correctamente por las FKs en SQLite.
-**Impacto:** no hay red de seguridad para cambios; CI/CD inviable.
+#### R2 — ~~Suite de tests completamente rota~~ — ✅ CORREGIDO (2026-05-04)
+Causa raíz identificada: FKs de SQLite y migraciones no compatibles con SQLite in-memory.
+Migraciones corregidas; suite ahora en **23/23 tests pasando**.
+Ramas cerradas: `fix/tests-sqlite-foreign-keys` + `fix/tests-breeze-desactualizados`.
 
 #### R3 — ~~`RegistroPantallaFunciona.php` es un archivo zombie~~ — ✅ CORREGIDO
 Archivo eliminado. Commit: `chore: eliminar archivo zombie RegistroPantallaFunciona`.
 
 ### ALTOS
 
-#### R4 — Registro público abierto
-La ruta `/register` permite crear cuentas sin invitación ni autorización.
-Un usuario nuevo sin rol puede autenticarse y navegar partes del sistema.
-**Impacto:** riesgo de acceso no autorizado en ambientes expuestos.
+#### R4 — ~~Registro público abierto~~ — ✅ CORREGIDO (2026-05-04)
+La ruta `/register` nunca existió en `auth.php` de Coefix — el riesgo era aparente, no real.
+`RegistrationTest` eliminado para reflejar el estado correcto del sistema.
+Usuarios se crean exclusivamente vía `/admin/usuarios` (requiere `permission:usuarios.ver`).
 
 #### R5 — ~~Unique constraint en `representacion_miembros.padron_id` (solo)~~ — ✅ CORREGIDO
 Confirmado y corregido. El `UNIQUE(padron_id)` fue reemplazado por `UNIQUE(evento_id, padron_id)`.
@@ -248,17 +272,16 @@ Se mantiene `INDEX(padron_id)` para soporte de FK. Migración aplicada en batch 
 
 ### MEDIOS
 
-#### R6 — Rutas Livewire duplicadas
-`setUpdateRoute` y `setScriptRoute` se registran en `routes/web.php` Y en `AppServiceProvider::boot()`.
-La segunda definición sobrescribe la primera silenciosamente.
+#### R6 — ~~Rutas Livewire duplicadas~~ — ✅ CORREGIDO
+`setUpdateRoute` y `setScriptRoute` definidos únicamente en `routes/web.php`.
+Definición duplicada en `AppServiceProvider::boot()` eliminada.
 
 #### R7 — ~~`max(now(), $registro->checked_in_at)` — tipos mixtos~~ — ✅ CORREGIDO
 Reemplazado por `now()->max(\Carbon\Carbon::parse($registro->checked_in_at ?? now()))`.
 Commit: `fix: corregir fecha segura en retiro reingreso`.
 
-#### R8 — `columnExists()` es dead code con SQL MySQL-only
-**Archivo:** `app/Livewire/Checkin/RegistroPantalla.php:687`
-Método privado que no se llama desde ningún lugar. Contiene `SHOW COLUMNS FROM {$table}` que no funciona en SQLite.
+#### R8 — ~~`columnExists()` es dead code con SQL MySQL-only~~ — ✅ CORREGIDO (2026-05-04)
+Método eliminado de `RegistroPantalla.php`. Commit: `chore: eliminar dead code columnExists`.
 
 #### R9 — ~~Ruta `/controles/retiro` sin middleware `evento.activo`~~ — ✅ CORREGIDO
 Middleware agregado en `routes/web.php`. Commit: `fix: agregar evento activo a ruta de retiro`.
@@ -275,8 +298,10 @@ Si el `.env` actual se usa en producción, expone trazas de stack ante errores.
 #### R12 — `station_id` siempre null en `registros_checkin`
 El campo existe en la tabla pero `saveAsistente()` nunca lo escribe.
 
-#### R13 — `quorumMax` crece con ciclos retiro/reingreso
-Si el mismo inmueble entra y sale múltiples veces, `quorumMax = actual + retirado` puede superar el total del padrón.
+#### R13 — ~~`quorumMax` crece con ciclos retiro/reingreso~~ — FALSO POSITIVO
+`quorumMax = actual + retirado` es el máximo histórico de presencia simultánea, no un contador absoluto.
+Un mismo inmueble solo tiene un registro activo por sesión; el estado cambia entre `CHECKED_IN` y `RETIRADO`
+pero no se duplica. El valor nunca puede superar el coeficiente total del padrón.
 
 #### R14 — `down()` de migración cabeza_inmueble_snapshot revierta a tipo incorrecto
 Un rollback de esa migración rompería todos los snapshots alfanuméricos.
@@ -287,19 +312,22 @@ Un rollback de esa migración rompería todos los snapshots alfanuméricos.
 
 ```
 [x] R1  — AppServiceProvider is_active: FALSO POSITIVO, no hay acción (aclarado 2026-05-03)
+[x] R2  — Suite de tests rota: migraciones SQLite corregidas, 23/23 pasan (hecho 2026-05-04)
 [x] R3  — Eliminar RegistroPantallaFunciona.php (hecho 2026-05-03)
+[x] R4  — Registro público: ruta /register nunca existió; RegistrationTest eliminado (hecho 2026-05-04)
 [x] R5  — Corregir unique constraint padron_id (hecho 2026-05-03)
+[x] R6  — Rutas Livewire duplicadas en AppServiceProvider eliminadas (hecho)
 [x] R7  — Corregir max(now(), string) en RetiroReingreso (hecho 2026-05-03)
+[x] R8  — Eliminar columnExists() dead code (hecho 2026-05-04)
 [x] R9  — Agregar middleware evento.activo a /controles/retiro (hecho 2026-05-03)
+[x] R13 — quorumMax: FALSO POSITIVO — comportamiento correcto por diseño
 
-[ ] 1.  Arreglar suite de tests para SQLite o migrar a MySQL en tests (R2)
-[ ] 2.  Desactivar /register o protegerla con middleware admin (R4)
-[ ] 3.  Eliminar definición duplicada de Livewire routes en AppServiceProvider (R6)
-[ ] 4.  Eliminar método columnExists() dead code (R8)
-[ ] 5.  Mover importación Excel a un Job asíncrono (R10)
-[ ] 6.  Escribir tests de dominio: ControlService, addPoder/removePoder, quórum, retiro/reingreso
-[ ] 7.  Revisar cálculo de quorumMax vs total del padrón (R13)
-[ ] 8.  Cambiar APP_DEBUG=false en producción (R11)
+[ ] 1.  Limpiar RegisteredUserController (dead code — tiene route('dashboard') roto pero sin ruta activa)
+[ ] 2.  Mover importación Excel a un Job asíncrono (R10)
+[ ] 3.  Escribir tests de dominio: ControlService, addPoder/removePoder, quórum, retiro/reingreso
+[ ] 4.  Cambiar APP_DEBUG=false en producción (R11)
+[ ] 5.  Resolver station_id siempre null en registros_checkin (R12)
+[ ] 6.  Revisar down() de migración cabeza_inmueble_snapshot (R14)
 ```
 
 ---
