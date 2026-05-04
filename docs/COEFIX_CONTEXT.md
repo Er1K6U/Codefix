@@ -160,8 +160,8 @@ Las marcas de tiempo se almacenan usando `now()` con el timezone de la app.
 - Rama cerrada: `fix/tests-sqlite-foreign-keys` → mergeada a `develop`.
 
 ### [2026-05-04] Desactivación de `/register` y limpieza de tests Breeze
-- La ruta `/register` no existe en Coefix (admins crean usuarios vía `/admin/usuarios`).
-- `RegistrationTest` eliminado — no tiene sentido en el dominio del sistema.
+- La ruta `/register` existía (generada por Breeze) y fue desactivada intencionalmente — no pertenece al flujo de Coefix; usuarios se crean vía `/admin/usuarios`.
+- `RegistrationTest` eliminado — reflejaba una funcionalidad inexistente en el dominio del sistema.
 - Tests restantes actualizados para reflejar el flujo real: `ExampleTest`, `AuthenticationTest`, `EmailVerificationTest`, `PasswordConfirmationTest`.
 - Rama cerrada: `fix/tests-breeze-desactualizados` → mergeada a `develop`.
 
@@ -262,9 +262,10 @@ Archivo eliminado. Commit: `chore: eliminar archivo zombie RegistroPantallaFunci
 ### ALTOS
 
 #### R4 — ~~Registro público abierto~~ — ✅ CORREGIDO (2026-05-04)
-La ruta `/register` nunca existió en `auth.php` de Coefix — el riesgo era aparente, no real.
-`RegistrationTest` eliminado para reflejar el estado correcto del sistema.
-Usuarios se crean exclusivamente vía `/admin/usuarios` (requiere `permission:usuarios.ver`).
+La ruta `/register` existía y era pública (generada por Breeze). Inspeccionada y determinada como
+incompatible con el flujo legítimo de Coefix: los usuarios solo deben crearse vía `/admin/usuarios`
+(requiere `permission:usuarios.ver`). La ruta fue desactivada intencionalmente eliminando su definición
+de `auth.php`. `RegistrationTest` eliminado en consecuencia.
 
 #### R5 — ~~Unique constraint en `representacion_miembros.padron_id` (solo)~~ — ✅ CORREGIDO
 Confirmado y corregido. El `UNIQUE(padron_id)` fue reemplazado por `UNIQUE(evento_id, padron_id)`.
