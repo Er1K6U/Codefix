@@ -16,12 +16,15 @@ return new class extends Migration {
             $table->index(['evento_id', 'grupo_id']);
         });
 
-        // Backfill: tomar evento_id desde el grupo
+        // Backfill: tomar evento_id desde el grupo (subquery compatible con MySQL y SQLite)
         DB::statement("
-            UPDATE representacion_miembros rm
-            JOIN representacion_grupos rg ON rg.id = rm.grupo_id
-            SET rm.evento_id = rg.evento_id
-            WHERE rm.evento_id IS NULL
+            UPDATE representacion_miembros
+            SET evento_id = (
+                SELECT rg.evento_id
+                FROM representacion_grupos rg
+                WHERE rg.id = representacion_miembros.grupo_id
+            )
+            WHERE evento_id IS NULL
         ");
 
         // Ya con datos, lo hacemos NOT NULL
