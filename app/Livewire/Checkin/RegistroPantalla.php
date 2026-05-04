@@ -682,23 +682,6 @@ class RegistroPantalla extends Component
     }
 
     /**
-     * Helper: validar si existe una columna (para no romper si aún no la migraste)
-     */
-    private function columnExists(string $table, string $column): bool
-    {
-        try {
-            $cols = DB::select("SHOW COLUMNS FROM {$table}");
-            foreach ($cols as $c) {
-                if (($c->Field ?? null) === $column)
-                    return true;
-            }
-            return false;
-        } catch (\Throwable $e) {
-            return false;
-        }
-    }
-
-    /**
      * ✅ Recalcula el snapshot del grupo actual si la cabeza ya tiene registro válido.
      * Esto evita desfases cuando agregan/quitan poderes después del check-in.
      */
