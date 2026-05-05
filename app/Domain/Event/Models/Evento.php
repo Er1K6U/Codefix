@@ -19,6 +19,7 @@ class Evento extends Model
         'fecha_fin',
         'activo',
         'tipo_quorum',
+        'personas_excel_path',
         'created_by',
         'updated_by',
     ];
