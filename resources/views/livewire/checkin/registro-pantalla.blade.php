@@ -113,14 +113,16 @@
                         <input
                             type="text"
                             wire:model.live="search"
-                            @disabled($registroId && $this->hasPendingChanges())  
+                            @disabled($registroId && $this->hasPendingChanges())
+                            placeholder="{{ $tipoQuorum === 'nominal' ? 'Busca por cédula o nombre' : 'Busca inmueble' }}"
                             class="w-full rounded-xl border-gray-300 focus:ring-2 focus:ring-indigo-300 disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
                         />
 
                         @if(!empty($results) && !($registroId && $this->hasUnsavedChanges()))
                             <div class="absolute z-50 mt-2 w-full bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden max-h-64 overflow-y-auto">
                                 @foreach($results as $r)
-                                    <button type="button" wire:click="requestSelectInmueble({{ $r['id'] }})"
+                                    <button type="button"
+                                        wire:click="{{ $tipoQuorum === 'nominal' ? 'requestSelectPersona' : 'requestSelectInmueble' }}({{ $r['id'] }})"
                                         class="w-full text-left px-4 py-3 hover:bg-gray-50">
                                         <div class="font-semibold text-gray-900">{{ $r['label'] }}</div>
                                         <div class="text-xs text-gray-500">Seleccionar</div>
@@ -144,7 +146,7 @@
             <div class="flex items-start justify-between gap-6">
                 <div class="min-w-0">
                     <div class="flex items-center gap-3">
-                        <div class="text-sm text-gray-500">Inmueble</div>
+                        <div class="text-sm text-gray-500">{{ $tipoQuorum === 'nominal' ? 'Persona' : 'Inmueble' }}</div>
                         <div class="text-lg font-black text-gray-900">
                             {{ $inmuebleLabel ?? '—' }}
                         </div>
@@ -152,14 +154,16 @@
 
                     <div class="mt-2 grid sm:grid-cols-2 gap-x-8 gap-y-2 text-sm text-gray-700">
                         <div class="min-w-0">
-                            <span class="font-semibold text-gray-800">Propietario:</span>
+                            <span class="font-semibold text-gray-800">{{ $tipoQuorum === 'nominal' ? 'Nombre:' : 'Propietario:' }}</span>
                             <span class="ml-1 break-words">{{ $propietarioLabel ?? '—' }}</span>
                         </div>
 
+                        @if($tipoQuorum !== 'nominal')
                         <div>
                             <span class="font-semibold text-gray-800">Coeficiente:</span>
                             <span class="ml-1">{{ is_null($coefInmueble) ? '—' : number_format($coefInmueble, 4, '.', '') }}</span>
                         </div>
+                        @endif
                     </div>
 
                     <div class="mt-3 flex flex-wrap items-center gap-2">
@@ -223,9 +227,9 @@
             </div>
 
             <div class="text-right">
-                <div class="text-sm text-gray-500">Coef. total grupo</div>
+                <div class="text-sm text-gray-500">{{ $tipoQuorum === 'nominal' ? 'Personas en grupo' : 'Coef. total grupo' }}</div>
                 <div class="text-lg font-black text-gray-900">
-                    {{ is_null($coefTotal) ? '—' : number_format($coefTotal, 4, '.', '') }}
+                    {{ is_null($coefTotal) ? '—' : ($tipoQuorum === 'nominal' ? (int) $coefTotal : number_format($coefTotal, 4, '.', '')) }}
                 </div>
                 @if(!is_null($poderCount))
                     <div class="text-xs text-gray-500 mt-1">
@@ -249,7 +253,7 @@
                             wire:model.live="poderSearch"
                             x-on:focus="open = true"
                             x-on:input="open = true"
-                            placeholder="Ej: 3504 o Juan Pérez"
+                            placeholder="{{ $tipoQuorum === 'nominal' ? 'Busca por cédula o nombre' : 'Ej: 3504 o Juan Pérez' }}"
                             class="w-full rounded-xl border-gray-300 focus:ring-2 focus:ring-emerald-200"
                         />
 
@@ -259,7 +263,7 @@
                                 @foreach($poderResults as $r)
                                     <button
                                         type="button"
-                                        wire:click="addPoder({{ $r['id'] }})"
+                                        wire:click="{{ $tipoQuorum === 'nominal' ? 'addPoderNominal' : 'addPoder' }}({{ $r['id'] }})"
                                         x-on:click="open = false"
                                         class="w-full text-left px-4 py-3 hover:bg-gray-50">
                                         <div class="flex items-center justify-between gap-3">
@@ -291,9 +295,9 @@
             {{-- Tabla con scroll vertical sutil --}}
             <div class="mt-3 border border-gray-200 rounded-2xl overflow-hidden">
                 <div class="grid grid-cols-12 gap-3 px-4 py-3 bg-emerald-50 text-xs font-semibold text-gray-600">
-                    <div class="col-span-3">Inmueble</div>
-                    <div class="col-span-6">Propietario</div>
-                    <div class="col-span-2 text-right">Coef</div>
+                    <div class="col-span-3">{{ $tipoQuorum === 'nominal' ? 'Cédula' : 'Inmueble' }}</div>
+                    <div class="col-span-6">{{ $tipoQuorum === 'nominal' ? 'Nombre' : 'Propietario' }}</div>
+                    <div class="col-span-2 text-right">{{ $tipoQuorum === 'nominal' ? 'Votos' : 'Coef' }}</div>
                     <div class="col-span-1 text-right">Acción</div>
                 </div>
 
@@ -321,13 +325,13 @@
                             </div>
 
                             <div class="col-span-2 text-right text-sm font-semibold text-gray-900">
-                                {{ number_format($m['coeficiente'], 4, '.', '') }}
+                                {{ $tipoQuorum === 'nominal' ? '1' : number_format($m['coeficiente'], 4, '.', '') }}
                             </div>
 
                             <div class="col-span-1 text-right">
                                 @if(!$m['es_cabeza'])
                                     <button type="button"
-                                        wire:click="removePoder({{ $m['miembro_id'] }})"
+                                        wire:click="{{ $tipoQuorum === 'nominal' ? 'removePoderNominal' : 'removePoder' }}({{ $m['miembro_id'] }})"
                                         class="text-xs px-3 py-1 rounded-lg border border-gray-300 hover:bg-gray-50 font-semibold">
                                         Quitar
                                     </button>

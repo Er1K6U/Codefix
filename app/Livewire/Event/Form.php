@@ -28,12 +28,14 @@ class Form extends Component
     public ?string $imagenActual = null;  // imagen guardada (modo editar)
 
     // ✅ Excels para importación
-    public $baseExcelFile = null;         // Base Evento
+    public $baseExcelFile = null;         // Base Evento (coeficiente)
     public $controlesExcelFile = null;    // Controles
+    public $personasExcelFile = null;     // Padrón nominal (personas/cédulas)
 
     // ✅ Rutas guardadas (para mostrar en UI si quieres)
     public ?string $baseExcelPath = null;       // eventos/{id}/base_evento.xlsx
     public ?string $controlesExcelPath = null;  // eventos/{id}/controles.xlsx
+    public ?string $personasExcelPath = null;   // eventos/{id}/personas.xlsx
 
     public function mount(?int $id = null): void
     {
@@ -50,8 +52,9 @@ class Form extends Component
             $this->activo = (bool) $evento->activo;
             $this->imagenActual = $evento->imagen;
 
-            $this->baseExcelPath = $evento->base_excel_path ?? null;
+            $this->baseExcelPath      = $evento->base_excel_path      ?? null;
             $this->controlesExcelPath = $evento->controles_excel_path ?? null;
+            $this->personasExcelPath  = $evento->personas_excel_path  ?? null;
             $this->tipoQuorum = $evento->tipo_quorum ?? 'coeficiente';
         } else {
             Gate::authorize('eventos.crear');
@@ -68,8 +71,9 @@ class Form extends Component
             'imagenFile' => 'nullable|image|max:2048',
 
             // ✅ validar archivos Excel
-            'baseExcelFile' => 'nullable|file|max:10240|mimes:xlsx,xls|mimetypes:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel',
+            'baseExcelFile'     => 'nullable|file|max:10240|mimes:xlsx,xls|mimetypes:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel',
             'controlesExcelFile' => 'nullable|file|max:10240|mimes:xlsx,xls|mimetypes:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel',
+            'personasExcelFile' => 'nullable|file|max:10240|mimes:xlsx,xls|mimetypes:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel',
             'tipoQuorum' => 'required|in:coeficiente,nominal',
         ];
 
@@ -109,15 +113,16 @@ class Form extends Component
             $evento = Evento::findOrFail($this->idEvento);
 
             $antes = [
-                'titulo' => $evento->titulo,
-                'slug' => $evento->slug,
-                'descripcion' => $evento->descripcion,
-                'fecha_inicio' => optional($evento->fecha_inicio)->format('Y-m-d'),
-                'activo' => (bool) $evento->activo,
-                'tipo_quorum' => $evento->tipo_quorum,
-                'imagen' => $evento->imagen,
-                'base_excel_path' => $evento->base_excel_path ?? null,
+                'titulo'               => $evento->titulo,
+                'slug'                 => $evento->slug,
+                'descripcion'          => $evento->descripcion,
+                'fecha_inicio'         => optional($evento->fecha_inicio)->format('Y-m-d'),
+                'activo'               => (bool) $evento->activo,
+                'tipo_quorum'          => $evento->tipo_quorum,
+                'imagen'               => $evento->imagen,
+                'base_excel_path'      => $evento->base_excel_path      ?? null,
                 'controles_excel_path' => $evento->controles_excel_path ?? null,
+                'personas_excel_path'  => $evento->personas_excel_path  ?? null,
             ];
 
             // Guardar datos base primero
@@ -150,20 +155,32 @@ class Form extends Component
                 $this->controlesExcelPath = $stored;
             }
 
-            if ($this->baseExcelFile || $this->controlesExcelFile) {
+            // ✅ Padrón nominal Excel
+            if ($this->personasExcelFile) {
+                if ($evento->personas_excel_path) {
+                    Storage::delete($evento->personas_excel_path);
+                }
+
+                $stored = $this->personasExcelFile->storeAs($dir, 'personas.xlsx');
+                $evento->personas_excel_path = $stored;
+                $this->personasExcelPath = $stored;
+            }
+
+            if ($this->baseExcelFile || $this->controlesExcelFile || $this->personasExcelFile) {
                 $evento->save();
             }
 
             $despues = [
-                'titulo' => $evento->titulo,
-                'slug' => $evento->slug,
-                'descripcion' => $evento->descripcion,
-                'fecha_inicio' => optional($evento->fecha_inicio)->format('Y-m-d'),
-                'activo' => (bool) $evento->activo,
-                'tipo_quorum' => $evento->tipo_quorum,
-                'imagen' => $evento->imagen,
-                'base_excel_path' => $evento->base_excel_path ?? null,
+                'titulo'               => $evento->titulo,
+                'slug'                 => $evento->slug,
+                'descripcion'          => $evento->descripcion,
+                'fecha_inicio'         => optional($evento->fecha_inicio)->format('Y-m-d'),
+                'activo'               => (bool) $evento->activo,
+                'tipo_quorum'          => $evento->tipo_quorum,
+                'imagen'               => $evento->imagen,
+                'base_excel_path'      => $evento->base_excel_path      ?? null,
                 'controles_excel_path' => $evento->controles_excel_path ?? null,
+                'personas_excel_path'  => $evento->personas_excel_path  ?? null,
             ];
 
             AuditLog::create([
@@ -209,19 +226,33 @@ class Form extends Component
                 $cambio = true;
             }
 
+            if ($this->personasExcelFile) {
+                $stored = $this->personasExcelFile->storeAs($dir, 'personas.xlsx');
+                $evento->personas_excel_path = $stored;
+                $this->personasExcelPath = $stored;
+                $cambio = true;
+            }
+
             if ($cambio) {
                 $evento->save();
             }
 
             // ✅ AUTO-IMPORT SOLO EN CREACIÓN (si hay archivos)
-            // Base: usa tu comando que selecciona el evento único
-            // Controles: import-excel explícito por ID
             $importMsgs = [];
 
-            if (!empty($evento->base_excel_path)) {
+            if ($evento->tipo_quorum !== 'nominal' && !empty($evento->base_excel_path)) {
                 $exit = Artisan::call('base:import', ['--wipe' => true]);
                 $out = trim(Artisan::output());
                 $importMsgs[] = $exit === 0 ? '✅ Base importada.' : '⚠️ Falló importación de Base.';
+                if ($out !== '') {
+                    $importMsgs[] = $out;
+                }
+            }
+
+            if ($evento->tipo_quorum === 'nominal' && !empty($evento->personas_excel_path)) {
+                $exit = Artisan::call('base:import-nominal', ['--wipe' => true]);
+                $out = trim(Artisan::output());
+                $importMsgs[] = $exit === 0 ? '✅ Padrón nominal importado.' : '⚠️ Falló importación del padrón nominal.';
                 if ($out !== '') {
                     $importMsgs[] = $out;
                 }
