@@ -31,6 +31,22 @@
             @error('descripcion') <p class="text-red-600 text-sm">{{ $message }}</p> @enderror
         </div>
 
+        {{-- Tipo de quórum --}}
+        <div>
+            <label class="text-sm font-semibold text-gray-700">Tipo de quórum</label>
+            <div class="mt-2 flex gap-6">
+                <label class="flex items-center gap-2 text-sm cursor-pointer">
+                    <input type="radio" wire:model.live="tipoQuorum" value="coeficiente">
+                    Coeficiente (%)
+                </label>
+                <label class="flex items-center gap-2 text-sm cursor-pointer">
+                    <input type="radio" wire:model.live="tipoQuorum" value="nominal">
+                    Nominal (por personas / cédulas)
+                </label>
+            </div>
+            @error('tipoQuorum') <p class="text-red-600 text-sm mt-1">{{ $message }}</p> @enderror
+        </div>
+
         {{-- ✅ Excel base del evento (padrón) --}}
         <div class="mt-6">
             <label class="block text-sm font-semibold text-gray-700 mb-2">

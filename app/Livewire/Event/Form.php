@@ -21,6 +21,7 @@ class Form extends Component
     public ?string $descripcion = null;
     public string $fecha_inicio = '';
     public bool $activo = true;
+    public string $tipoQuorum = 'coeficiente';
 
     // ✅ Imagen (ya existía)
     public $imagenFile = null;            // archivo temporal
@@ -51,6 +52,7 @@ class Form extends Component
 
             $this->baseExcelPath = $evento->base_excel_path ?? null;
             $this->controlesExcelPath = $evento->controles_excel_path ?? null;
+            $this->tipoQuorum = $evento->tipo_quorum ?? 'coeficiente';
         } else {
             Gate::authorize('eventos.crear');
         }
@@ -68,9 +70,14 @@ class Form extends Component
             // ✅ validar archivos Excel
             'baseExcelFile' => 'nullable|file|max:10240|mimes:xlsx,xls|mimetypes:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel',
             'controlesExcelFile' => 'nullable|file|max:10240|mimes:xlsx,xls|mimetypes:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel',
+            'tipoQuorum' => 'required|in:coeficiente,nominal',
         ];
 
         $data = $this->validate($rules);
+
+        // Mapear camelCase de Livewire al snake_case de la columna DB
+        $data['tipo_quorum'] = $data['tipoQuorum'];
+        unset($data['tipoQuorum']);
 
         // ✅ Generar slug AUTOMÁTICO y ÚNICO
         $slugBase = Str::slug($this->titulo);
@@ -107,6 +114,7 @@ class Form extends Component
                 'descripcion' => $evento->descripcion,
                 'fecha_inicio' => optional($evento->fecha_inicio)->format('Y-m-d'),
                 'activo' => (bool) $evento->activo,
+                'tipo_quorum' => $evento->tipo_quorum,
                 'imagen' => $evento->imagen,
                 'base_excel_path' => $evento->base_excel_path ?? null,
                 'controles_excel_path' => $evento->controles_excel_path ?? null,
@@ -152,6 +160,7 @@ class Form extends Component
                 'descripcion' => $evento->descripcion,
                 'fecha_inicio' => optional($evento->fecha_inicio)->format('Y-m-d'),
                 'activo' => (bool) $evento->activo,
+                'tipo_quorum' => $evento->tipo_quorum,
                 'imagen' => $evento->imagen,
                 'base_excel_path' => $evento->base_excel_path ?? null,
                 'controles_excel_path' => $evento->controles_excel_path ?? null,
@@ -243,6 +252,7 @@ class Form extends Component
                         'descripcion' => $evento->descripcion,
                         'fecha_inicio' => optional($evento->fecha_inicio)->format('Y-m-d'),
                         'activo' => (bool) $evento->activo,
+                        'tipo_quorum' => $evento->tipo_quorum,
                         'imagen' => $evento->imagen,
                         'base_excel_path' => $evento->base_excel_path ?? null,
                         'controles_excel_path' => $evento->controles_excel_path ?? null,
