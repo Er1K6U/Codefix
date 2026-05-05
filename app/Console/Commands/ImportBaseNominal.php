@@ -125,17 +125,62 @@ class ImportBaseNominal extends Command
             return self::FAILURE;
         }
 
-        DB::transaction(function () use ($eventoId, $data) {
+        $gruposCreados = 0;
+
+        DB::transaction(function () use ($eventoId, $data, &$gruposCreados) {
             if ($this->option('wipe')) {
+                // CASCADE borra grupos_nominal y miembros_nominal automáticamente
                 DB::table('evento_personas')->where('evento_id', $eventoId)->delete();
             }
 
             foreach (array_chunk($data, 500) as $chunk) {
                 DB::table('evento_personas')->insert($chunk);
             }
+
+            // Personas que aún no tienen grupo base (idempotente sin --wipe)
+            $sinGrupo = DB::table('evento_personas as ep')
+                ->leftJoin('representacion_grupos_nominal as rgn', 'rgn.cabeza_persona_id', '=', 'ep.id')
+                ->where('ep.evento_id', $eventoId)
+                ->whereNull('rgn.id')
+                ->pluck('ep.id');
+
+            if ($sinGrupo->isNotEmpty()) {
+                $now = now();
+
+                $gruposData = $sinGrupo->map(fn($id) => [
+                    'evento_id'         => $eventoId,
+                    'cabeza_persona_id' => $id,
+                    'created_at'        => $now,
+                    'updated_at'        => $now,
+                ])->all();
+
+                foreach (array_chunk($gruposData, 500) as $chunk) {
+                    DB::table('representacion_grupos_nominal')->insert($chunk);
+                }
+
+                $grupos = DB::table('representacion_grupos_nominal')
+                    ->where('evento_id', $eventoId)
+                    ->whereIn('cabeza_persona_id', $sinGrupo->all())
+                    ->pluck('id', 'cabeza_persona_id');
+
+                $miembrosData = $sinGrupo->map(fn($id) => [
+                    'grupo_id'   => $grupos[$id],
+                    'evento_id'  => $eventoId,
+                    'persona_id' => $id,
+                    'es_cabeza'  => true,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ])->all();
+
+                foreach (array_chunk($miembrosData, 500) as $chunk) {
+                    DB::table('representacion_miembros_nominal')->insert($chunk);
+                }
+
+                $gruposCreados = $sinGrupo->count();
+            }
         });
 
-        $this->info("✅ Importación nominal OK. Personas importadas: {$count}");
+        $this->info("✅ Importación nominal OK. Personas: {$count} | Grupos base: {$gruposCreados}");
 
         return self::SUCCESS;
     }
