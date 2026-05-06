@@ -39,7 +39,7 @@
                         if ($tipoQuorum === 'nominal') {
                             $kpis = [
                                 ['Controles activos',  (int)($controlesActivos ?? 0),                   '#0F3D4C', 'count', null],
-                                ['Máx. habilitadas',   ($personasCheckin + $personasRetiradas) . ' / ' . $personasTotal, '#2E2E2E', 'text',  null],
+                                ['Máx. votos',         ($personasCheckin + $personasRetiradas) . ' / ' . $personasTotal, '#2E2E2E', 'text',  null],
                                 ['Retiradas',          $personasRetiradas,                              '#d32f57', 'count', 'Controles: ' . ($controlesRetiradosUnicos ?? 0)],
                             ];
                         } else {
@@ -84,7 +84,7 @@
                                     <span class="text-2xl font-semibold text-gray-400">/ {{ $personasTotal }}</span>
                                 </p>
                                 <p class="mt-1 text-sm text-gray-500">
-                                    personas &nbsp;·&nbsp;
+                                    votos representados &nbsp;·&nbsp;
                                     <span class="text-gray-400">{{ number_format((float)$quorumActual, 2) }}%</span>
                                 </p>
                             @else

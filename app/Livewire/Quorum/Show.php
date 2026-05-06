@@ -79,17 +79,18 @@ class Show extends Component
         $this->controlesRetiradosUnicos = $this->controlesRetirados;
 
         if ($this->tipoQuorum === 'nominal') {
+            // SUM(coef_total_snapshot): incluye votos representados por poderes anexados
             $this->personasCheckin = (int) DB::table('registros_checkin')
                 ->where('evento_id', $eventoId)
                 ->where('estado', 'CHECKED_IN')
                 ->whereNotNull('persona_id')
-                ->count();
+                ->sum('coef_total_snapshot');
 
             $this->personasRetiradas = (int) DB::table('registros_checkin')
                 ->where('evento_id', $eventoId)
                 ->where('estado', 'RETIRADO')
                 ->whereNotNull('persona_id')
-                ->count();
+                ->sum('coef_total_snapshot');
 
             $this->personasTotal = (int) DB::table('evento_personas')
                 ->where('evento_id', $eventoId)
