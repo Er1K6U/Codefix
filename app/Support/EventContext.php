@@ -25,6 +25,17 @@ class EventContext
             ->value('id');
     }
 
+    public function tipoQuorum(): string
+    {
+        $id = $this->eventoId();
+
+        if (!$id) {
+            return 'coeficiente';
+        }
+
+        return Evento::where('id', $id)->value('tipo_quorum') ?? 'coeficiente';
+    }
+
     public function stationId(): ?int
     {
         // Ya no usamos stations aquí

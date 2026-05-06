@@ -89,13 +89,20 @@ class RegistroPantalla extends Component
     public ?string $poderMsg = null;
     public ?int $requestedPadronId = null;
 
+    // ---- Modo nominal ----
+    public string $tipoQuorum = 'coeficiente';
+    public ?int $personaId = null;
+    public ?string $personaCedula = null;
+
     /**
-     * ✅ Sincroniza el eventoId con el contexto del puesto (Station -> evento activo).
+     * ✅ Sincroniza el eventoId y tipoQuorum con el contexto del puesto.
      * Esto asegura aislamiento total: este componente opera SOLO dentro del evento activo.
      */
     private function syncEventoFromContext(): void
     {
-        $this->eventoId = app(EventContext::class)->eventoId();
+        $ctx = app(EventContext::class);
+        $this->eventoId   = $ctx->eventoId();
+        $this->tipoQuorum = $ctx->tipoQuorum();
     }
 
     /**
@@ -122,7 +129,6 @@ class RegistroPantalla extends Component
 
     public function updatedSearch(): void
     {
-        // ✅ Seguridad: si no hay evento activo, no buscamos nada
         if (!$this->eventoId) {
             $this->results = [];
             return;
@@ -135,26 +141,42 @@ class RegistroPantalla extends Component
             return;
         }
 
-        $rows = DB::table('evento_padron')
-            ->select('id', 'inmueble')
-            ->where('evento_id', $this->eventoId)
-            ->where('inmueble', 'like', "%{$term}%")
-            ->limit(10)
-            ->get();
+        if ($this->tipoQuorum === 'nominal') {
+            $rows = DB::table('evento_personas')
+                ->select('id', 'cedula', 'nombre')
+                ->where('evento_id', $this->eventoId)
+                ->where(function ($q) use ($term) {
+                    $q->where('cedula', 'like', "%{$term}%")
+                      ->orWhere('nombre', 'like', "%{$term}%");
+                })
+                ->limit(10)
+                ->get();
 
-        $this->results = $rows->map(fn($r) => [
-            'id' => (int) $r->id,
-            'label' => (string) $r->inmueble,
-        ])->toArray();
+            $this->results = $rows->map(fn($r) => [
+                'id'    => (int) $r->id,
+                'label' => "{$r->nombre} ({$r->cedula})",
+            ])->toArray();
+        } else {
+            $rows = DB::table('evento_padron')
+                ->select('id', 'inmueble')
+                ->where('evento_id', $this->eventoId)
+                ->where('inmueble', 'like', "%{$term}%")
+                ->limit(10)
+                ->get();
+
+            $this->results = $rows->map(fn($r) => [
+                'id'    => (int) $r->id,
+                'label' => (string) $r->inmueble,
+            ])->toArray();
+        }
     }
 
     /**
-     * ✅ selección protegida desde las sugerencias
+     * ✅ selección protegida desde las sugerencias (coeficiente)
      */
     public function requestSelectInmueble(int $inmuebleId): void
     {
         if ($this->registroId && $this->hasPendingChanges()) {
-            // ✅ NO mostramos modal al cambiar poderes; solo cuando intentan cambiar de inmueble
             $this->confirmSaveRequired = true;
             $this->pendingAction = 'select';
             $this->pendingInmuebleId = $inmuebleId;
@@ -162,6 +184,107 @@ class RegistroPantalla extends Component
         }
 
         $this->selectInmueble($inmuebleId);
+    }
+
+    /**
+     * Selección protegida desde las sugerencias (nominal)
+     */
+    public function requestSelectPersona(int $personaId): void
+    {
+        if ($this->registroId && $this->hasPendingChanges()) {
+            $this->confirmSaveRequired = true;
+            $this->pendingAction = 'select';
+            $this->pendingInmuebleId = $personaId;
+            return;
+        }
+
+        $this->selectPersona($personaId);
+    }
+
+    public function selectPersona(int $personaId): void
+    {
+        if (!$this->eventoId) {
+            $this->checkinError = 'No hay evento activo en este puesto.';
+            return;
+        }
+
+        $this->resetControlUi(true);
+        $this->resetPoderUi();
+
+        // Resolver: si es poder en otro grupo, abrir la cabeza
+        [$targetId, $msg] = $this->resolveCheckinTargetNominal($personaId);
+        $this->checkinMsg   = $msg;
+        $this->checkinError = null;
+
+        $personaId        = (int) $targetId;
+        $this->personaId  = $personaId;
+
+        $persona = DB::table('evento_personas')
+            ->where('evento_id', $this->eventoId)
+            ->where('id', $personaId)
+            ->first();
+
+        $this->inmuebleLabel   = $persona ? "{$persona->nombre} ({$persona->cedula})" : "Persona #{$personaId}";
+        $this->propietarioLabel = $persona?->nombre ?? null;
+        $this->personaCedula   = $persona?->cedula ?? null;
+        $this->coefInmueble    = null;
+
+        // Registro checkin
+        $registro = DB::table('registros_checkin')
+            ->where('evento_id', $this->eventoId)
+            ->where('persona_id', $personaId)
+            ->first();
+
+        if (!$registro) {
+            $newId = DB::table('registros_checkin')->insertGetId([
+                'evento_id'        => $this->eventoId,
+                'grupo_id'         => null,
+                'inmueble_base_id' => null,
+                'persona_id'       => $personaId,
+                'estado'           => 'EN_PROCESO',
+                'created_at'       => now(),
+                'updated_at'       => now(),
+            ]);
+            $registro = DB::table('registros_checkin')->where('id', $newId)->first();
+        }
+
+        $this->registroId    = (int) $registro->id;
+        $this->inmuebleBaseId = null;
+        $this->estado        = (string) $registro->estado;
+
+        // Asistente (precargar desde evento_personas si no existe en el registro)
+        $this->asistenteNombre   = $registro->asistente_nombre   ?? ($persona?->nombre   ?? null);
+        $this->asistenteTelefono = $registro->asistente_telefono ?? ($persona?->telefono ?? null);
+        $this->asistenteCorreo   = $registro->asistente_correo   ?? ($persona?->correo   ?? null);
+        $this->errorTelefono     = null;
+
+        $this->asistenteNombreOriginal   = $this->asistenteNombre;
+        $this->asistenteTelefonoOriginal = $this->asistenteTelefono;
+        $this->asistenteCorreoOriginal   = $this->asistenteCorreo;
+
+        $this->confirmDiscard    = false;
+        $this->pendingAction     = null;
+        $this->pendingInmuebleId = null;
+
+        // Control asignado (si existe)
+        $this->controlNumero = null;
+        $this->controlSerial = null;
+
+        if (!is_null($registro->control_id)) {
+            $control = DB::table('controles')
+                ->select('numero', 'serial')
+                ->where('id', $registro->control_id)
+                ->first();
+
+            $this->controlNumero = $control?->numero ?? null;
+            $this->controlSerial = $control?->serial ?? null;
+        }
+
+        // Grupo nominal
+        $this->ensureGrupoNominalForCabeza($personaId);
+
+        $this->search  = '';
+        $this->results = [];
     }
 
     public function selectInmueble(int $inmuebleId): void
@@ -289,6 +412,90 @@ class RegistroPantalla extends Component
         }
 
         return [$requestedPadronId, null];
+    }
+
+    private function resolveCheckinTargetNominal(int $requestedPersonaId): array
+    {
+        if (!$this->eventoId) {
+            return [$requestedPersonaId, null];
+        }
+
+        $miembro = DB::table('representacion_miembros_nominal as rm')
+            ->join('representacion_grupos_nominal as rg', 'rg.id', '=', 'rm.grupo_id')
+            ->where('rm.evento_id', $this->eventoId)
+            ->where('rg.evento_id', $this->eventoId)
+            ->where('rm.persona_id', $requestedPersonaId)
+            ->select('rm.grupo_id', 'rg.cabeza_persona_id')
+            ->first();
+
+        if (!$miembro) {
+            return [$requestedPersonaId, null];
+        }
+
+        $headId = (int) $miembro->cabeza_persona_id;
+
+        if ($headId > 0 && $headId !== $requestedPersonaId) {
+            $reqLabel  = $this->labelPersona($requestedPersonaId);
+            $headLabel = $this->labelPersona($headId);
+            return [$headId, "ℹ️ La persona {$reqLabel} está representada por {$headLabel}. Se abrirá la cabeza automáticamente."];
+        }
+
+        return [$requestedPersonaId, null];
+    }
+
+    private function ensureGrupoNominalForCabeza(int $personaId): void
+    {
+        if (!$this->eventoId) {
+            $this->grupoId = null;
+            $this->miembros = [];
+            $this->coefTotal = null;
+            $this->poderCount = null;
+            $this->isCabezaSeleccionada = false;
+            return;
+        }
+
+        $grupo = DB::table('representacion_grupos_nominal')
+            ->where('evento_id', $this->eventoId)
+            ->where('cabeza_persona_id', $personaId)
+            ->first();
+
+        if (!$grupo) {
+            // Defensive: debería existir por import, pero creamos si falta
+            $gid = DB::table('representacion_grupos_nominal')->insertGetId([
+                'evento_id'         => $this->eventoId,
+                'cabeza_persona_id' => $personaId,
+                'created_at'        => now(),
+                'updated_at'        => now(),
+            ]);
+
+            $existing = DB::table('representacion_miembros_nominal')
+                ->where('evento_id', $this->eventoId)
+                ->where('persona_id', $personaId)
+                ->first();
+
+            if (!$existing) {
+                DB::table('representacion_miembros_nominal')->insert([
+                    'evento_id'  => $this->eventoId,
+                    'grupo_id'   => $gid,
+                    'persona_id' => $personaId,
+                    'es_cabeza'  => 1,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            } else {
+                DB::table('representacion_miembros_nominal')
+                    ->where('id', $existing->id)
+                    ->update(['grupo_id' => $gid, 'es_cabeza' => 1, 'updated_at' => now()]);
+            }
+
+            $this->grupoId = $gid;
+        } else {
+            $this->grupoId = (int) $grupo->id;
+        }
+
+        $this->isCabezaSeleccionada = true;
+
+        $this->loadMiembrosNominal();
     }
 
     private function ensureGrupoForCabeza(int $padronId): void
@@ -477,6 +684,60 @@ class RegistroPantalla extends Component
         $this->poderCount = count(array_filter($this->miembros, fn($m) => !$m['es_cabeza']));
     }
 
+    private function loadMiembrosNominal(): void
+    {
+        if (!$this->eventoId || !$this->grupoId) {
+            $this->miembros   = [];
+            $this->coefTotal  = null;
+            $this->poderCount = null;
+            return;
+        }
+
+        $rows = DB::table('representacion_miembros_nominal as rm')
+            ->join('evento_personas as ep', 'ep.id', '=', 'rm.persona_id')
+            ->where('rm.evento_id', $this->eventoId)
+            ->where('rm.grupo_id', $this->grupoId)
+            ->select(
+                'rm.id as miembro_id',
+                'rm.persona_id',
+                'rm.es_cabeza',
+                'ep.cedula',
+                'ep.nombre'
+            )
+            ->orderByDesc('rm.es_cabeza')
+            ->orderBy('ep.nombre')
+            ->get();
+
+        // Reutiliza las mismas claves de coeficiente para compatibilidad con la vista
+        $this->miembros = $rows->map(fn($r) => [
+            'miembro_id'  => (int) $r->miembro_id,
+            'padron_id'   => (int) $r->persona_id,
+            'persona_id'  => (int) $r->persona_id,
+            'es_cabeza'   => (int) $r->es_cabeza === 1,
+            'inmueble'    => (string) $r->cedula,
+            'propietario' => (string) $r->nombre,
+            'coeficiente' => 1.0,
+        ])->toArray();
+
+        $this->coefTotal  = (float) count($this->miembros);
+        $this->poderCount = count(array_filter($this->miembros, fn($m) => !$m['es_cabeza']));
+    }
+
+    private function labelPersona(int $personaId): string
+    {
+        if (!$this->eventoId) {
+            return (string) $personaId;
+        }
+
+        $p = DB::table('evento_personas')
+            ->select('cedula', 'nombre')
+            ->where('evento_id', $this->eventoId)
+            ->where('id', $personaId)
+            ->first();
+
+        return $p ? "{$p->nombre} ({$p->cedula})" : (string) $personaId;
+    }
+
     public function updatedPoderSearch(): void
     {
         $term = trim($this->poderSearch);
@@ -491,22 +752,41 @@ class RegistroPantalla extends Component
             return;
         }
 
-        $rows = DB::table('evento_padron')
-            ->select('id', 'inmueble', 'propietario', 'coeficiente')
-            ->where('evento_id', $this->eventoId)
-            ->where(function ($q) use ($term) {
-                $q->where('inmueble', 'like', "%{$term}%")
-                    ->orWhere('propietario', 'like', "%{$term}%");
-            })
-            ->limit(8)
-            ->get();
+        if ($this->tipoQuorum === 'nominal') {
+            $rows = DB::table('evento_personas')
+                ->select('id', 'cedula', 'nombre')
+                ->where('evento_id', $this->eventoId)
+                ->where(function ($q) use ($term) {
+                    $q->where('cedula', 'like', "%{$term}%")
+                      ->orWhere('nombre', 'like', "%{$term}%");
+                })
+                ->limit(8)
+                ->get();
 
-        $this->poderResults = $rows->map(fn($r) => [
-            'id' => (int) $r->id,
-            'label' => (string) $r->inmueble,
-            'propietario' => (string) $r->propietario,
-            'coef' => (float) $r->coeficiente,
-        ])->toArray();
+            $this->poderResults = $rows->map(fn($r) => [
+                'id'          => (int) $r->id,
+                'label'       => (string) $r->nombre,
+                'propietario' => (string) $r->cedula,
+                'coef'        => 1.0,
+            ])->toArray();
+        } else {
+            $rows = DB::table('evento_padron')
+                ->select('id', 'inmueble', 'propietario', 'coeficiente')
+                ->where('evento_id', $this->eventoId)
+                ->where(function ($q) use ($term) {
+                    $q->where('inmueble', 'like', "%{$term}%")
+                        ->orWhere('propietario', 'like', "%{$term}%");
+                })
+                ->limit(8)
+                ->get();
+
+            $this->poderResults = $rows->map(fn($r) => [
+                'id'          => (int) $r->id,
+                'label'       => (string) $r->inmueble,
+                'propietario' => (string) $r->propietario,
+                'coef'        => (float) $r->coeficiente,
+            ])->toArray();
+        }
     }
 
     /**
@@ -731,6 +1011,48 @@ class RegistroPantalla extends Component
                 'coef_total_snapshot' => $coefTotal,
                 'cabeza_inmueble_snapshot' => (string) $head->inmueble,
                 'updated_at' => now(),
+            ]);
+    }
+
+    private function syncGrupoNominalSnapshot(int $grupoNominalId): void
+    {
+        if (!$this->eventoId || $grupoNominalId <= 0) {
+            return;
+        }
+
+        $grupo = DB::table('representacion_grupos_nominal')
+            ->where('evento_id', $this->eventoId)
+            ->where('id', $grupoNominalId)
+            ->first(['id', 'cabeza_persona_id']);
+
+        if (!$grupo || empty($grupo->cabeza_persona_id)) {
+            return;
+        }
+
+        $headPersonaId = (int) $grupo->cabeza_persona_id;
+
+        $persona = DB::table('evento_personas')
+            ->where('evento_id', $this->eventoId)
+            ->where('id', $headPersonaId)
+            ->first(['nombre']);
+
+        if (!$persona) {
+            return;
+        }
+
+        $count = (int) DB::table('representacion_miembros_nominal')
+            ->where('evento_id', $this->eventoId)
+            ->where('grupo_id', $grupoNominalId)
+            ->count();
+
+        DB::table('registros_checkin')
+            ->where('evento_id', $this->eventoId)
+            ->where('persona_id', $headPersonaId)
+            ->whereIn('estado', ['CHECKED_IN', 'RETIRADO'])
+            ->update([
+                'coef_total_snapshot'     => (float) $count,
+                'cabeza_inmueble_snapshot' => (string) $persona->nombre,
+                'updated_at'              => now(),
             ]);
     }
 
@@ -1115,6 +1437,296 @@ class RegistroPantalla extends Component
                 ? 'Error quitando poder: ' . $e->getMessage()
                 : 'Ocurrió un error quitando el poder. Revisa logs.';
             return;
+        }
+    }
+
+    public function addPoderNominal(int $personaId): void
+    {
+        $this->poderError = null;
+        $this->poderMsg   = null;
+
+        if (!$this->eventoId || !$this->grupoId) {
+            $this->poderError = 'Primero selecciona una persona.';
+            return;
+        }
+
+        if ((int) $personaId === (int) $this->personaId) {
+            $this->poderError = 'Esa persona ya es la cabeza del grupo.';
+            return;
+        }
+
+        $targetGrupoId = (int) $this->grupoId;
+
+        $result = DB::transaction(function () use ($personaId) {
+
+            $reg = DB::table('registros_checkin')
+                ->where('evento_id', $this->eventoId)
+                ->where('persona_id', $personaId)
+                ->lockForUpdate()
+                ->first(['estado', 'control_id']);
+
+            if ($reg) {
+                $estado      = strtoupper((string) ($reg->estado ?? ''));
+                $tieneControl = !is_null($reg->control_id);
+
+                if ($estado === 'CHECKED_IN' || $tieneControl) {
+                    return ['status' => 'locked_checkedin_or_control', 'estado' => $estado, 'tiene_control' => $tieneControl];
+                }
+            }
+
+            $exists = DB::table('representacion_miembros_nominal')
+                ->where('evento_id', $this->eventoId)
+                ->where('persona_id', $personaId)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$exists) {
+                DB::table('representacion_miembros_nominal')->insert([
+                    'evento_id'  => $this->eventoId,
+                    'grupo_id'   => $this->grupoId,
+                    'persona_id' => $personaId,
+                    'es_cabeza'  => 0,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+                return ['status' => 'inserted'];
+            }
+
+            if ((int) $exists->grupo_id === (int) $this->grupoId) {
+                return ['status' => 'already_in_group'];
+            }
+
+            $otherGroupId = (int) $exists->grupo_id;
+
+            $otherGroup = DB::table('representacion_grupos_nominal')
+                ->where('evento_id', $this->eventoId)
+                ->where('id', $otherGroupId)
+                ->lockForUpdate()
+                ->first(['id', 'cabeza_persona_id']);
+
+            $headPersonaId = (int) ($otherGroup->cabeza_persona_id ?? 0);
+
+            if (!$otherGroup || $headPersonaId <= 0) {
+                return ['status' => 'blocked_in_other_group', 'head_persona_id' => null];
+            }
+
+            // Caso A: es la cabeza de su propio grupo y está sola → puede moverse
+            if ($headPersonaId === (int) $personaId) {
+                $cnt = (int) DB::table('representacion_miembros_nominal')
+                    ->where('evento_id', $this->eventoId)
+                    ->where('grupo_id', $otherGroupId)
+                    ->lockForUpdate()
+                    ->count();
+
+                if ($cnt === 1) {
+                    DB::table('representacion_miembros_nominal')
+                        ->where('evento_id', $this->eventoId)
+                        ->where('id', $exists->id)
+                        ->update(['grupo_id' => $this->grupoId, 'es_cabeza' => 0, 'updated_at' => now()]);
+
+                    return ['status' => 'moved_from_base'];
+                }
+
+                return ['status' => 'blocked_in_other_group', 'head_persona_id' => $headPersonaId];
+            }
+
+            // Caso B: pertenece a otro grupo cuya cabeza es otra persona
+            return ['status' => 'blocked_in_other_group', 'head_persona_id' => $headPersonaId];
+        });
+
+        if (($result['status'] ?? null) === 'locked_checkedin_or_control') {
+            $label = $this->labelPersona($personaId);
+            $detalle = [];
+            if (($result['estado'] ?? '') === 'CHECKED_IN') $detalle[] = 'ya está CHECKED_IN';
+            if (!empty($result['tiene_control'])) $detalle[] = 'ya tiene control asignado';
+            $this->openControlModal('No se puede anexar', "La persona {$label} no se puede anexar porque " . implode(' y ', $detalle) . ".");
+            $this->poderSearch = '';
+            $this->poderResults = [];
+            return;
+        }
+
+        if (($result['status'] ?? null) === 'blocked_in_other_group') {
+            $label    = $this->labelPersona($personaId);
+            $headId   = $result['head_persona_id'] ?? null;
+            $headLabel = $headId ? $this->labelPersona((int) $headId) : 'otra persona';
+            $this->openControlModal('No se puede anexar', "La persona {$label} ya está asignada a un grupo cuya cabeza es {$headLabel}.");
+            $this->poderSearch = '';
+            $this->poderResults = [];
+            return;
+        }
+
+        if (in_array(($result['status'] ?? null), ['inserted', 'moved_from_base'], true)) {
+            $this->syncGrupoNominalSnapshot($targetGrupoId);
+            $this->poderMsg  = '✅ Poder nominal anexado correctamente.';
+            $this->dirtyGrupo = true;
+        } elseif (($result['status'] ?? null) === 'already_in_group') {
+            $this->poderMsg = 'ℹ️ Esa persona ya pertenece a este grupo.';
+        } else {
+            $this->poderError = 'No se pudo anexar el poder.';
+        }
+
+        $this->poderSearch  = '';
+        $this->poderResults = [];
+        $this->loadMiembrosNominal();
+    }
+
+    public function removePoderNominal(int $miembroId): void
+    {
+        $this->poderError = null;
+        $this->poderMsg   = null;
+
+        if (!$this->eventoId || !$this->grupoId) {
+            $this->poderError = 'No hay evento activo en este puesto.';
+            return;
+        }
+
+        $eventoId = (int) $this->eventoId;
+
+        try {
+            $out = DB::transaction(function () use ($miembroId, $eventoId) {
+
+                $m = DB::table('representacion_miembros_nominal')
+                    ->where('evento_id', $eventoId)
+                    ->where('id', $miembroId)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$m) {
+                    return ['ok' => false, 'msg' => 'No se encontró el poder.'];
+                }
+
+                if ((int) $m->es_cabeza === 1) {
+                    return ['ok' => false, 'msg' => 'No puedes quitar la cabeza del grupo.'];
+                }
+
+                $personaId    = (int) $m->persona_id;
+                $grupoActualId = (int) $m->grupo_id;
+
+                // Liberar control si lo tuviera
+                $regPoder = DB::table('registros_checkin')
+                    ->where('evento_id', $eventoId)
+                    ->where('persona_id', $personaId)
+                    ->lockForUpdate()
+                    ->first();
+
+                $freedControlNum = null;
+
+                if ($regPoder && !is_null($regPoder->control_id)) {
+                    $control = DB::table('controles')->where('id', $regPoder->control_id)->lockForUpdate()->first();
+
+                    if ($control) {
+                        $freedControlNum = (int) $control->numero;
+                        DB::table('controles')->where('id', $control->id)
+                            ->update(['estado' => 'LIBRE', 'asignado_a_registro_id' => null, 'updated_at' => now()]);
+                    }
+
+                    DB::table('registros_checkin')->where('id', $regPoder->id)
+                        ->update(['control_id' => null, 'control_numero_snapshot' => null, 'updated_at' => now()]);
+
+                    $regPoder = DB::table('registros_checkin')->where('id', $regPoder->id)->lockForUpdate()->first();
+                }
+
+                // Asegurar grupo base para esta persona (cabeza = ella sola)
+                $grupoBase = DB::table('representacion_grupos_nominal')
+                    ->where('evento_id', $eventoId)
+                    ->where('cabeza_persona_id', $personaId)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($grupoBase) {
+                    $grupoBaseId = (int) $grupoBase->id;
+                    $cnt = (int) DB::table('representacion_miembros_nominal')
+                        ->where('evento_id', $eventoId)
+                        ->where('grupo_id', $grupoBaseId)
+                        ->lockForUpdate()
+                        ->count();
+
+                    if ($cnt > 1) {
+                        return ['ok' => false, 'msg' => 'No se pudo separar: la persona ya es cabeza de otro grupo con poderes.'];
+                    }
+                } else {
+                    $grupoBaseId = (int) DB::table('representacion_grupos_nominal')->insertGetId([
+                        'evento_id'         => $eventoId,
+                        'cabeza_persona_id' => $personaId,
+                        'created_at'        => now(),
+                        'updated_at'        => now(),
+                    ]);
+                }
+
+                // Mover al grupo base y convertir en cabeza
+                DB::table('representacion_miembros_nominal')
+                    ->where('evento_id', $eventoId)
+                    ->where('id', $m->id)
+                    ->update(['grupo_id' => $grupoBaseId, 'es_cabeza' => 1, 'updated_at' => now()]);
+
+                DB::table('representacion_grupos_nominal')
+                    ->where('evento_id', $eventoId)
+                    ->where('id', $grupoBaseId)
+                    ->update(['cabeza_persona_id' => $personaId, 'updated_at' => now()]);
+
+                // Reset check-in del poder
+                $reset = [
+                    'grupo_id'            => null,
+                    'estado'              => 'EN_PROCESO',
+                    'asistente_nombre'    => null,
+                    'asistente_telefono'  => null,
+                    'asistente_correo'    => null,
+                    'control_id'          => null,
+                    'control_numero_snapshot' => null,
+                    'checked_in_at'       => null,
+                    'checked_in_by_user_id' => null,
+                    'station_id'          => null,
+                    'updated_at'          => now(),
+                ];
+
+                if (\Illuminate\Support\Facades\Schema::hasColumn('registros_checkin', 'control_serial_snapshot')) {
+                    $reset['control_serial_snapshot'] = null;
+                }
+
+                if ($regPoder) {
+                    DB::table('registros_checkin')
+                        ->where('id', $regPoder->id)
+                        ->where('evento_id', $eventoId)
+                        ->update($reset);
+                } else {
+                    DB::table('registros_checkin')->insert(array_merge($reset, [
+                        'evento_id'        => $eventoId,
+                        'persona_id'       => $personaId,
+                        'inmueble_base_id' => null,
+                        'created_at'       => now(),
+                    ]));
+                }
+
+                return [
+                    'ok'              => true,
+                    'persona_id'      => $personaId,
+                    'grupo_base_id'   => $grupoBaseId,
+                    'grupo_actual_id' => $grupoActualId,
+                    'freed_control_num' => $freedControlNum,
+                ];
+            });
+
+            if (empty($out['ok'])) {
+                $this->poderError = $out['msg'] ?? 'No fue posible quitar el poder.';
+                return;
+            }
+
+            $this->syncGrupoNominalSnapshot((int) $out['grupo_actual_id']);
+
+            $label = $this->labelPersona((int) $out['persona_id']);
+            $extra = '';
+            if (!empty($out['freed_control_num'])) {
+                $extra = " (Se liberó el control #{$out['freed_control_num']})";
+            }
+
+            $this->poderMsg   = "🗑️ Poder removido: {$label}. Quedó independiente{$extra}.";
+            $this->dirtyGrupo = true;
+            $this->loadMiembrosNominal();
+
+        } catch (\Throwable $e) {
+            $this->poderError = app()->isLocal()
+                ? 'Error quitando poder: ' . $e->getMessage()
+                : 'Ocurrió un error quitando el poder. Revisa logs.';
         }
     }
 
@@ -1579,7 +2191,11 @@ class RegistroPantalla extends Component
 
         if ($action === 'select' && $nextInmuebleId) {
             $this->clearSelection();
-            $this->selectInmueble((int) $nextInmuebleId);
+            if ($this->tipoQuorum === 'nominal') {
+                $this->selectPersona((int) $nextInmuebleId);
+            } else {
+                $this->selectInmueble((int) $nextInmuebleId);
+            }
             return;
         }
     }
@@ -1724,6 +2340,9 @@ class RegistroPantalla extends Component
         $this->pendingInmuebleId = null;
         $this->propietarioLabel = null;
         $this->coefInmueble = null;
+
+        $this->personaId    = null;
+        $this->personaCedula = null;
 
 
         $this->resetControlUi(true);

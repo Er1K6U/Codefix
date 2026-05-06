@@ -18,6 +18,8 @@ class Evento extends Model
         'fecha_inicio',
         'fecha_fin',
         'activo',
+        'tipo_quorum',
+        'personas_excel_path',
         'created_by',
         'updated_by',
     ];
@@ -26,6 +28,7 @@ class Evento extends Model
         'fecha_inicio' => 'date',
         'fecha_fin' => 'date',
         'activo' => 'boolean',
+        'tipo_quorum' => 'string',
     ];
 
     protected static function booted(): void

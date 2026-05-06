@@ -67,7 +67,11 @@
                     wire:keydown.enter.prevent="retirar" placeholder="Ej: 27"
                     class="mt-1 w-full rounded-xl border-gray-300 focus:ring-2 focus:ring-red-200" />
                 <div class="mt-2 text-xs text-gray-500">
-                    Esto marcará el control como retirado y descontará el coeficiente del grupo.
+                    @if($tipoQuorum === 'nominal')
+                        Esto marcará el control como retirado y descontará el voto de la persona.
+                    @else
+                        Esto marcará el control como retirado y descontará el coeficiente del grupo.
+                    @endif
                 </div>
             </div>
         </div>
@@ -85,7 +89,11 @@
                     wire:keydown.enter.prevent="reingresar" placeholder="Ej: 27"
                     class="mt-1 w-full rounded-xl border-gray-300 focus:ring-2 focus:ring-emerald-200" />
                 <div class="mt-2 text-xs text-gray-500">
-                    Esto vuelve a activar el control y suma nuevamente el coeficiente del grupo.
+                    @if($tipoQuorum === 'nominal')
+                        Esto vuelve a activar el control y suma nuevamente el voto de la persona.
+                    @else
+                        Esto vuelve a activar el control y suma nuevamente el coeficiente del grupo.
+                    @endif
                 </div>
             </div>
         </div>
@@ -112,10 +120,16 @@
                 <div class="text-sm font-black text-gray-900">Resultado</div>
 
                 <div class="mt-2 grid md:grid-cols-2 gap-3 text-sm text-gray-700">
-                    <div><span class="font-semibold">Inmueble/Grupo:</span> {{ $consultaInmueble ?? '—' }}</div>
-                    <div><span class="font-semibold">Propietario:</span> {{ $consultaPropietario ?? '—' }}</div>
-                    <div><span class="font-semibold">Asistente:</span> {{ $consultaAsistente ?? '—' }}</div>
-                    <div><span class="font-semibold">Celular:</span> {{ $consultaTelefono ?? '—' }}</div>
+                    @if($tipoQuorum === 'nominal')
+                        <div class="md:col-span-2"><span class="font-semibold">Cédula:</span> {{ $consultaCedula ?? '—' }}</div>
+                        <div><span class="font-semibold">Nombre:</span> {{ $consultaAsistente ?? '—' }}</div>
+                        <div><span class="font-semibold">Celular:</span> {{ $consultaTelefono ?? '—' }}</div>
+                    @else
+                        <div><span class="font-semibold">Inmueble/Grupo:</span> {{ $consultaInmueble ?? '—' }}</div>
+                        <div><span class="font-semibold">Propietario:</span> {{ $consultaPropietario ?? '—' }}</div>
+                        <div><span class="font-semibold">Asistente:</span> {{ $consultaAsistente ?? '—' }}</div>
+                        <div><span class="font-semibold">Celular:</span> {{ $consultaTelefono ?? '—' }}</div>
+                    @endif
                     <div class="md:col-span-2 text-xs text-gray-600">
                         Estado registro: <span class="font-semibold">{{ $consultaEstadoRegistro ?? '—' }}</span>
                     </div>
@@ -156,9 +170,14 @@
             <div class="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
                 <div class="text-sm font-black text-gray-900">Control actual: información</div>
                 <div class="mt-2 grid md:grid-cols-2 gap-3 text-sm text-gray-700">
-                    <div><span class="font-semibold">Asistente:</span> {{ $reemplazoInfoNombre }}</div>
+                    @if($tipoQuorum === 'nominal')
+                        <div><span class="font-semibold">Cédula:</span> {{ $reemplazoInfoCedula ?? '—' }}</div>
+                        <div><span class="font-semibold">Nombre:</span> {{ $reemplazoInfoNombre }}</div>
+                    @else
+                        <div><span class="font-semibold">Asistente:</span> {{ $reemplazoInfoNombre }}</div>
+                        <div><span class="font-semibold">Inmueble/Grupo:</span> {{ $reemplazoInfoInmueble }}</div>
+                    @endif
                     <div><span class="font-semibold">Teléfono:</span> {{ $reemplazoInfoTelefono }}</div>
-                    <div><span class="font-semibold">Inmueble/Grupo:</span> {{ $reemplazoInfoInmueble }}</div>
                     <div><span class="font-semibold">Estado registro:</span> {{ $reemplazoInfoEstadoRegistro }}</div>
                     <div><span class="font-semibold">Estado control:</span> {{ $reemplazoInfoEstadoControl }}</div>
                     <div class="text-xs text-gray-600">

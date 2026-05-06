@@ -24,9 +24,9 @@
                     <tr class="text-left text-gray-700">
                         <th class="px-4 py-3 font-bold">Código</th>
                         <th class="px-4 py-3 font-bold"># Control</th>
-                        <th class="px-4 py-3 font-bold">Inmueble cabeza</th>
-                        <th class="px-4 py-3 font-bold">Propietario</th>
-                        <th class="px-4 py-3 font-bold">Coef</th>
+                        <th class="px-4 py-3 font-bold">{{ $tipoQuorum === 'nominal' ? 'Cédula' : 'Inmueble cabeza' }}</th>
+                        <th class="px-4 py-3 font-bold">{{ $tipoQuorum === 'nominal' ? 'Nombre' : 'Propietario' }}</th>
+                        <th class="px-4 py-3 font-bold">{{ $tipoQuorum === 'nominal' ? 'Votos' : 'Coef' }}</th>
                         <th class="px-4 py-3 font-bold">Estado</th>
                     </tr>
                 </thead>
@@ -57,7 +57,11 @@
                         <tr class="border-t bg-gray-50">
                             <td class="px-4 py-3 font-bold text-gray-900" colspan="4">TOTAL</td>
                             <td class="px-4 py-3 font-mono font-black text-gray-900">
-                                {{ str_pad((string) ((int) round($totalCoef * 100)), 3, '0', STR_PAD_LEFT) }}
+                                @if($tipoQuorum === 'nominal')
+                                    {{ (int) $totalCoef }} votos
+                                @else
+                                    {{ str_pad((string) ((int) round($totalCoef * 100)), 3, '0', STR_PAD_LEFT) }}
+                                @endif
                             </td>
                             <td class="px-4 py-3"></td>
                         </tr>

@@ -31,10 +31,27 @@
             @error('descripcion') <p class="text-red-600 text-sm">{{ $message }}</p> @enderror
         </div>
 
-        {{-- ✅ Excel base del evento (padrón) --}}
+        {{-- Tipo de quórum --}}
+        <div>
+            <label class="text-sm font-semibold text-gray-700">Tipo de quórum</label>
+            <div class="mt-2 flex gap-6">
+                <label class="flex items-center gap-2 text-sm cursor-pointer">
+                    <input type="radio" wire:model.live="tipoQuorum" value="coeficiente">
+                    Coeficiente (%)
+                </label>
+                <label class="flex items-center gap-2 text-sm cursor-pointer">
+                    <input type="radio" wire:model.live="tipoQuorum" value="nominal">
+                    Nominal (por personas / cédulas)
+                </label>
+            </div>
+            @error('tipoQuorum') <p class="text-red-600 text-sm mt-1">{{ $message }}</p> @enderror
+        </div>
+
+        {{-- Excel base: coeficiente --}}
+        @if($tipoQuorum !== 'nominal')
         <div class="mt-6">
-            <label class="block text-sm font-semibold text-gray-700 mb-2">
-                Excel base del evento (Padrón / Coeficientes)
+            <label class="block text-sm font-semibold text-gray-700 mb-1">
+                Excel base del evento <span class="text-gray-400 font-normal">(coeficientes / padrón de inmuebles)</span>
             </label>
 
             <input type="file" wire:model="baseExcelFile" accept=".xlsx,.xls" class="block w-full text-sm text-gray-700
@@ -44,10 +61,39 @@
                        hover:file:opacity-90 transition
                        rounded-xl border-gray-300" />
 
+            @if($baseExcelPath)
+                <p class="mt-1 text-xs text-gray-500">Archivo actual: {{ basename($baseExcelPath) }}</p>
+            @endif
+
             @error('baseExcelFile')
                 <p class="mt-2 text-sm text-red-600 font-semibold">{{ $message }}</p>
             @enderror
         </div>
+        @endif
+
+        {{-- Excel base: nominal --}}
+        @if($tipoQuorum === 'nominal')
+        <div class="mt-6">
+            <label class="block text-sm font-semibold text-gray-700 mb-1">
+                Excel padrón nominal <span class="text-gray-400 font-normal">(lista de personas / cédulas)</span>
+            </label>
+
+            <input type="file" wire:model="personasExcelFile" accept=".xlsx,.xls" class="block w-full text-sm text-gray-700
+                       file:mr-4 file:py-2 file:px-4
+                       file:rounded-xl file:border-0
+                       file:bg-[#0F3D4C] file:text-white
+                       hover:file:opacity-90 transition
+                       rounded-xl border-gray-300" />
+
+            @if($personasExcelPath)
+                <p class="mt-1 text-xs text-gray-500">Archivo actual: {{ basename($personasExcelPath) }}</p>
+            @endif
+
+            @error('personasExcelFile')
+                <p class="mt-2 text-sm text-red-600 font-semibold">{{ $message }}</p>
+            @enderror
+        </div>
+        @endif
 
         {{-- ✅ Excel controles --}}
         <div class="mt-4">
