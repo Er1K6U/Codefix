@@ -47,18 +47,66 @@ class InformeResumenSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Co
 
     public function columnFormats(): array
     {
-        return [
-            'B' => '0.00',
-        ];
+        $tq = DB::table('eventos')->where('id', $this->eventoId)->value('tipo_quorum') ?? 'coeficiente';
+        return $tq === 'nominal'
+            ? ['B' => '0']
+            : ['B' => '0.00'];
     }
 
     public function array(): array
     {
-        $evento = DB::table('eventos')->where('id', $this->eventoId)->first();
-        $titulo = $evento->titulo ?? 'Evento';
-        $fecha = now()->format('Y-m-d H:i');
+        $evento     = DB::table('eventos')->where('id', $this->eventoId)->first();
+        $titulo     = $evento->titulo ?? 'Evento';
+        $fecha      = now()->format('Y-m-d H:i');
+        $tipoQuorum = $evento->tipo_quorum ?? 'coeficiente';
 
-        // Último registro válido por inmueble con registro
+        $controlesActivos = DB::table('registros_checkin')
+            ->where('evento_id', $this->eventoId)
+            ->whereIn('estado', ['CHECKED_IN', 'RETIRADO'])
+            ->whereNotNull('control_id')
+            ->distinct()
+            ->count('control_id');
+
+        if ($tipoQuorum === 'nominal') {
+            $votosPresente = (int) DB::table('registros_checkin')
+                ->where('evento_id', $this->eventoId)
+                ->where('estado', 'CHECKED_IN')
+                ->whereNotNull('persona_id')
+                ->sum('coef_total_snapshot');
+
+            $votosRetirado = (int) DB::table('registros_checkin')
+                ->where('evento_id', $this->eventoId)
+                ->where('estado', 'RETIRADO')
+                ->whereNotNull('persona_id')
+                ->sum('coef_total_snapshot');
+
+            $personasConRegistro = (int) DB::table('registros_checkin')
+                ->where('evento_id', $this->eventoId)
+                ->whereNotNull('persona_id')
+                ->whereIn('estado', ['CHECKED_IN', 'RETIRADO'])
+                ->count();
+
+            $personasTotal = (int) DB::table('evento_personas')
+                ->where('evento_id', $this->eventoId)
+                ->count();
+
+            $personasNoAsistio = $personasTotal - $personasConRegistro;
+
+            return [
+                ['COEFIX - INFORME DE ASAMBLEA'],
+                ['Evento:', $titulo],
+                ['Generado:', $fecha],
+                [''],
+                ['RESUMEN GENERAL (MODO NOMINAL)'],
+                ['Controles activos:', $controlesActivos],
+                ['Votos presentes (CHECKED_IN):', $votosPresente],
+                ['Votos retirados (RETIRADO):', $votosRetirado],
+                ['Personas no asistieron:', $personasNoAsistio],
+                ['Total personas en padrón nominal:', $personasTotal],
+            ];
+        }
+
+        // ── MODO COEFICIENTE ─────────────────────────────────────────
         $lastPerInmueble = DB::table('registros_checkin')
             ->selectRaw('MAX(id) as last_id')
             ->where('evento_id', $this->eventoId)
@@ -78,11 +126,9 @@ class InformeResumenSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Co
 
         foreach ($items as $it) {
             $coef = $this->coefReal($it->coef_total_snapshot);
-
             if ($it->estado === 'CHECKED_IN') {
                 $coefPresente += $coef;
             }
-
             if ($it->estado === 'RETIRADO') {
                 $coefRetirado += $coef;
             }
@@ -91,16 +137,6 @@ class InformeResumenSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Co
         $coefPresente = round($coefPresente, 2);
         $coefRetirado = round($coefRetirado, 2);
 
-        // Controles activos / registros válidos (valor nominal, sin decimales)
-        $controlesActivos = DB::table('registros_checkin')
-            ->where('evento_id', $this->eventoId)
-            ->whereIn('estado', ['CHECKED_IN', 'RETIRADO'])
-            ->whereNotNull('control_id')
-            ->distinct()
-            ->count('control_id');
-
-        // Coeficiente no asistió:
-        // inmuebles sin CHECKED_IN ni RETIRADO y que además no quedaron representados como poder
         $coefNoAsistio = (float) DB::table('evento_padron as ep')
             ->where('ep.evento_id', $this->eventoId)
             ->whereNotExists(function ($q) {
@@ -120,9 +156,7 @@ class InformeResumenSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Co
             ->sum('ep.coeficiente');
 
         $coefNoAsistio = round($coefNoAsistio, 2);
-
-        // Total del evento
-        $coefTotal = round($coefPresente + $coefRetirado + $coefNoAsistio, 2);
+        $coefTotal     = round($coefPresente + $coefRetirado + $coefNoAsistio, 2);
 
         return [
             ['COEFIX - INFORME DE ASAMBLEA'],
@@ -201,14 +235,70 @@ class InformeQuorumSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Con
 
     public function columnFormats(): array
     {
-        return [
-            'B' => '0.00',
-            'C' => '0.00',
-        ];
+        $tq = DB::table('eventos')->where('id', $this->eventoId)->value('tipo_quorum') ?? 'coeficiente';
+        return $tq === 'nominal'
+            ? ['B' => '0', 'C' => '0']
+            : ['B' => '0.00', 'C' => '0.00'];
     }
 
     public function array(): array
     {
+        $tipoQuorum = DB::table('eventos')->where('id', $this->eventoId)->value('tipo_quorum') ?? 'coeficiente';
+
+        $rows = [];
+
+        if ($tipoQuorum === 'nominal') {
+            $items = DB::table('registros_checkin as rc')
+                ->leftJoin('evento_personas as ep', 'ep.id', '=', 'rc.persona_id')
+                ->where('rc.evento_id', $this->eventoId)
+                ->whereNotNull('rc.persona_id')
+                ->whereIn('rc.estado', ['CHECKED_IN', 'RETIRADO'])
+                ->orderBy('rc.control_numero_snapshot')
+                ->get(['rc.estado', 'rc.coef_total_snapshot', 'ep.cedula', 'ep.nombre']);
+
+            $presentes    = [];
+            $retirados    = [];
+            $votosPresente = 0;
+            $votosRetirado = 0;
+
+            foreach ($items as $it) {
+                $cedula = $it->cedula ?? '—';
+                $nombre = $it->nombre ?? '—';
+                $votos  = (int) ($it->coef_total_snapshot ?? 1);
+
+                if ($it->estado === 'CHECKED_IN') {
+                    $votosPresente += $votos;
+                    $presentes[] = [$cedula, $nombre, $votos];
+                } else {
+                    $votosRetirado += $votos;
+                    $retirados[] = [$cedula, $nombre, $votos];
+                }
+            }
+
+            $votosTotal = $votosPresente + $votosRetirado;
+
+            $rows[] = ['QUÓRUM (SNAPSHOT ACTUAL - MODO NOMINAL)'];
+            $rows[] = [''];
+            $rows[] = ['Votos presentes (CHECKED_IN):', $votosPresente];
+            $rows[] = ['Votos retirados (RETIRADO):', $votosRetirado];
+            $rows[] = ['Votos totales (presente + retirado):', $votosTotal];
+            $rows[] = [''];
+            $rows[] = ['PRESENTES'];
+            $rows[] = ['Cédula', 'Nombre', 'Votos'];
+            foreach ($presentes as $r) {
+                $rows[] = $r;
+            }
+            $rows[] = [''];
+            $rows[] = ['RETIRADOS'];
+            $rows[] = ['Cédula', 'Nombre', 'Votos'];
+            foreach ($retirados as $r) {
+                $rows[] = $r;
+            }
+
+            return $rows;
+        }
+
+        // ── MODO COEFICIENTE ─────────────────────────────────────────
         $lastPerInmueble = DB::table('registros_checkin')
             ->selectRaw('MAX(id) as last_id')
             ->where('evento_id', $this->eventoId)
@@ -232,21 +322,20 @@ class InformeQuorumSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Con
                 'ep.coeficiente as coef_padron',
             ]);
 
-        $presentes = [];
-        $retirados = [];
+        $presentes    = [];
+        $retirados    = [];
         $coefPresente = 0.0;
         $coefRetirado = 0.0;
 
         foreach ($items as $it) {
-            $inmueble = $it->cabeza_inmueble_snapshot ?: ($it->inmueble_padron ?? '');
+            $inmueble    = $it->cabeza_inmueble_snapshot ?: ($it->inmueble_padron ?? '');
             $propietario = $it->propietario_padron ?? '';
-            $coefRaw = (float) ($it->coef_total_snapshot ?? 0);
+            $coefRaw     = (float) ($it->coef_total_snapshot ?? 0);
 
             if ($it->estado === 'CHECKED_IN') {
                 $coefPresente += $coefRaw;
                 $presentes[] = [$inmueble, $propietario, $coefRaw];
             }
-
             if ($it->estado === 'RETIRADO') {
                 $coefRetirado += $coefRaw;
                 $retirados[] = [$inmueble, $propietario, $coefRaw];
@@ -255,23 +344,19 @@ class InformeQuorumSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Con
 
         $coefPresente = round($coefPresente, 2);
         $coefRetirado = round($coefRetirado, 2);
-        $coefTotal = round($coefPresente + $coefRetirado, 2);
+        $coefTotal    = round($coefPresente + $coefRetirado, 2);
 
-        $rows = [];
         $rows[] = ['QUÓRUM (SNAPSHOT ACTUAL)'];
         $rows[] = [''];
-
         $rows[] = ['Coeficiente presente (CHECKED_IN):', $coefPresente];
         $rows[] = ['Coeficiente retirado (RETIRADO):', $coefRetirado];
         $rows[] = ['Coeficiente total (presente + retirado):', $coefTotal];
         $rows[] = [''];
-
         $rows[] = ['PRESENTES'];
         $rows[] = ['Inmueble cabeza', 'Propietario', 'Coef'];
         foreach ($presentes as $r) {
             $rows[] = $r;
         }
-
         $rows[] = [''];
         $rows[] = ['RETIRADOS'];
         $rows[] = ['Inmueble cabeza', 'Propietario', 'Coef'];
@@ -386,17 +471,72 @@ class InformeAsistenciaSheet implements FromArray, WithTitle, \Maatwebsite\Excel
 
     public function columnFormats(): array
     {
-        return [
-            'H' => '0.00',
-        ];
+        $tq = DB::table('eventos')->where('id', $this->eventoId)->value('tipo_quorum') ?? 'coeficiente';
+        return $tq === 'nominal'
+            ? ['H' => '0']
+            : ['H' => '0.00'];
     }
 
     public function array(): array
     {
-        $rows = [];
+        $tipoQuorum = DB::table('eventos')->where('id', $this->eventoId)->value('tipo_quorum') ?? 'coeficiente';
 
+        $rows   = [];
         $rows[] = ['ASISTENCIA (BASE TURNING)'];
         $rows[] = [''];
+
+        if ($tipoQuorum === 'nominal') {
+            $rows[] = ['# Control', 'Código', 'Cédula', 'Nombre', '', 'Teléfono', 'Correo', 'Votos', 'Estado', 'Hora check-in', 'Hora retiro', 'Hora reingreso'];
+
+            $items = DB::table('registros_checkin as rc')
+                ->leftJoin('evento_personas as ep', 'ep.id', '=', 'rc.persona_id')
+                ->leftJoin('controles as c', function ($join) {
+                    $join->on('c.evento_id', '=', 'rc.evento_id')
+                        ->where(function ($q) {
+                            $q->whereColumn('c.id', 'rc.control_id')
+                                ->orWhereColumn('c.numero', 'rc.control_numero_snapshot');
+                        });
+                })
+                ->where('rc.evento_id', $this->eventoId)
+                ->whereNotNull('rc.persona_id')
+                ->whereIn('rc.estado', ['CHECKED_IN', 'RETIRADO'])
+                ->orderBy('rc.control_numero_snapshot')
+                ->get([
+                    'rc.estado',
+                    'rc.control_numero_snapshot',
+                    'rc.control_serial_snapshot',
+                    'rc.coef_total_snapshot',
+                    'rc.asistente_telefono',
+                    'rc.asistente_correo',
+                    'rc.checked_in_at',
+                    'rc.retirado_at',
+                    'rc.reingreso_at',
+                    'ep.cedula',
+                    'ep.nombre',
+                    'c.serial as control_serial_db',
+                ]);
+
+            foreach ($items as $it) {
+                $rows[] = [
+                    $it->control_numero_snapshot ?? '',
+                    $it->control_serial_snapshot ?? ($it->control_serial_db ?? ''),
+                    $it->cedula ?? '',
+                    $it->nombre ?? '',
+                    '',
+                    $it->asistente_telefono ?? '',
+                    $it->asistente_correo ?? '',
+                    (int) ($it->coef_total_snapshot ?? 1),
+                    $it->estado,
+                    $this->fmtHora($it->checked_in_at ?? null),
+                    $this->fmtHora($it->retirado_at ?? null),
+                    $this->fmtHora($it->reingreso_at ?? null),
+                ];
+            }
+
+            return $rows;
+        }
+
+        // ── MODO COEFICIENTE ─────────────────────────────────────────
         $rows[] = ['# Control', 'Código', 'Inmueble cabeza', 'Propietario', 'Asistente', 'Teléfono', 'Correo', 'Coef', 'Estado', 'Hora check-in', 'Hora retiro', 'Hora reingreso'];
 
         $lastPerInmueble = DB::table('registros_checkin')
@@ -439,24 +579,15 @@ class InformeAsistenciaSheet implements FromArray, WithTitle, \Maatwebsite\Excel
             ]);
 
         foreach ($items as $it) {
-            $controlNumero = $it->control_numero_snapshot ?? '';
-            $codigo = $it->control_serial_snapshot ?? ($it->control_serial_db ?? '');
-            $inmuebleCabeza = $it->cabeza_inmueble_snapshot ?: ($it->inmueble_padron ?? '');
-            $propietario = $it->propietario_padron ?? '';
-            $asistente = $it->asistente_nombre ?? '';
-            $telefono = $it->asistente_telefono ?? '';
-            $correo = $it->asistente_correo ?? '';
-            $coefRaw = (float) ($it->coef_total_snapshot ?? 0);
-
             $rows[] = [
-                $controlNumero,
-                $codigo,
-                $inmuebleCabeza,
-                $propietario,
-                $asistente,
-                $telefono,
-                $correo,
-                $coefRaw,
+                $it->control_numero_snapshot ?? '',
+                $it->control_serial_snapshot ?? ($it->control_serial_db ?? ''),
+                $it->cabeza_inmueble_snapshot ?: ($it->inmueble_padron ?? ''),
+                $it->propietario_padron ?? '',
+                $it->asistente_nombre ?? '',
+                $it->asistente_telefono ?? '',
+                $it->asistente_correo ?? '',
+                (float) ($it->coef_total_snapshot ?? 0),
                 $it->estado,
                 $this->fmtHora($it->checked_in_at ?? null),
                 $this->fmtHora($it->retirado_at ?? null),
@@ -554,31 +685,96 @@ class InformePoderesSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Co
 
     public function columnFormats(): array
     {
-        return [
-            'D' => '0.00',
-            'E' => '0.00',
-            'F' => '0.00',
-        ];
+        $tq = DB::table('eventos')->where('id', $this->eventoId)->value('tipo_quorum') ?? 'coeficiente';
+        return $tq === 'nominal'
+            ? ['D' => '0', 'E' => '0', 'F' => '0']
+            : ['D' => '0.00', 'E' => '0.00', 'F' => '0.00'];
     }
 
     public function array(): array
     {
-        $rows = [];
+        $tipoQuorum = DB::table('eventos')->where('id', $this->eventoId)->value('tipo_quorum') ?? 'coeficiente';
 
+        $rows   = [];
         $rows[] = ['PODERES / REPRESENTACIONES'];
         $rows[] = [''];
 
-        $rows[] = [
-            'Inmueble cabeza',
-            'Propietario cabeza',
-            '# Poderes',
-            'Coef propio',
-            'Coef poderes',
-            'Coef total',
-            'Estado',
-            '# Control',
-            'Código Control',
-        ];
+        if ($tipoQuorum === 'nominal') {
+            $rows[] = ['Nombre cabeza', 'Cédula cabeza', '# Poderes', 'Votos propios (1)', 'Votos poderes', 'Votos total', 'Estado', '# Control', 'Código Control'];
+
+            $poderesPersonaIds = DB::table('representacion_miembros_nominal')
+                ->where('evento_id', $this->eventoId)
+                ->where('es_cabeza', 0)
+                ->pluck('persona_id')
+                ->unique()
+                ->values()
+                ->all();
+
+            $lastRcByPersona = DB::table('registros_checkin')
+                ->selectRaw('persona_id, MAX(id) as last_id')
+                ->where('evento_id', $this->eventoId)
+                ->whereNotNull('persona_id')
+                ->whereIn('estado', ['CHECKED_IN', 'RETIRADO'])
+                ->groupBy('persona_id');
+
+            $grupos = DB::table('representacion_grupos_nominal as g')
+                ->leftJoin('evento_personas as cabeza', 'cabeza.id', '=', 'g.cabeza_persona_id')
+                ->leftJoinSub($lastRcByPersona, 'lr', function ($join) {
+                    $join->on('lr.persona_id', '=', 'g.cabeza_persona_id');
+                })
+                ->leftJoin('registros_checkin as rc', 'rc.id', '=', 'lr.last_id')
+                ->where('g.evento_id', $this->eventoId)
+                ->when(!empty($poderesPersonaIds), function ($q) use ($poderesPersonaIds) {
+                    $q->whereNotIn('g.cabeza_persona_id', $poderesPersonaIds);
+                })
+                ->orderBy('cabeza.nombre')
+                ->get([
+                    'g.id as grupo_id',
+                    'cabeza.nombre as cabeza_nombre',
+                    'cabeza.cedula as cabeza_cedula',
+                    'rc.estado as rc_estado',
+                    'rc.control_numero_snapshot',
+                    'rc.control_serial_snapshot',
+                ]);
+
+            $miembros = DB::table('representacion_miembros_nominal as rm')
+                ->where('rm.evento_id', $this->eventoId)
+                ->get(['rm.grupo_id', 'rm.es_cabeza'])
+                ->groupBy('grupo_id');
+
+            $totalVotosPropio  = 0;
+            $totalVotosPoderes = 0;
+            $totalVotosTotal   = 0;
+
+            foreach ($grupos as $g) {
+                $grupoMiembros = $miembros->get($g->grupo_id, collect());
+                $poderesCount  = $grupoMiembros->where('es_cabeza', 0)->count();
+                $votosTotal    = 1 + $poderesCount;
+
+                $rows[] = [
+                    $g->cabeza_nombre ?? '',
+                    $g->cabeza_cedula ?? '',
+                    $poderesCount,
+                    1,
+                    $poderesCount,
+                    $votosTotal,
+                    $g->rc_estado ?? '',
+                    $g->control_numero_snapshot ?? '',
+                    $g->control_serial_snapshot ?? '',
+                ];
+
+                $totalVotosPropio++;
+                $totalVotosPoderes += $poderesCount;
+                $totalVotosTotal   += $votosTotal;
+            }
+
+            $rows[] = [''];
+            $rows[] = ['TOTAL', '', '', $totalVotosPropio, $totalVotosPoderes, $totalVotosTotal, '', '', ''];
+            return $rows;
+        }
+
+        // ── MODO COEFICIENTE ─────────────────────────────────────────
+        $rows[] = ['Inmueble cabeza', 'Propietario cabeza', '# Poderes', 'Coef propio', 'Coef poderes', 'Coef total', 'Estado', '# Control', 'Código Control'];
 
         $apoderadosIds = DB::table('representacion_miembros')
             ->where('evento_id', $this->eventoId)
@@ -621,67 +817,44 @@ class InformePoderesSheet implements FromArray, WithTitle, \Maatwebsite\Excel\Co
         $miembros = DB::table('representacion_miembros as rm')
             ->join('evento_padron as ep', 'ep.id', '=', 'rm.padron_id')
             ->where('rm.evento_id', $this->eventoId)
-            ->get([
-                'rm.grupo_id',
-                'rm.es_cabeza',
-                'ep.coeficiente',
-            ])
+            ->get(['rm.grupo_id', 'rm.es_cabeza', 'ep.coeficiente'])
             ->groupBy('grupo_id');
 
-        $totalCoefPropio = 0.0;
+        $totalCoefPropio  = 0.0;
         $totalCoefPoderes = 0.0;
-        $totalCoefFinal = 0.0;
+        $totalCoefFinal   = 0.0;
 
         foreach ($grupos as $g) {
-            $grupoMiembros = $miembros->get($g->grupo_id, collect());
-
-            $poderesCount = $grupoMiembros->where('es_cabeza', 0)->count();
-            $coefPropioRaw = (float) ($g->cabeza_coef ?? 0);
-
+            $grupoMiembros  = $miembros->get($g->grupo_id, collect());
+            $poderesCount   = $grupoMiembros->where('es_cabeza', 0)->count();
+            $coefPropioRaw  = (float) ($g->cabeza_coef ?? 0);
             $coefPoderesRaw = 0.0;
+
             foreach ($grupoMiembros as $m) {
                 if ((int) $m->es_cabeza === 0) {
                     $coefPoderesRaw += (float) ($m->coeficiente ?? 0);
                 }
             }
 
-            $coefPropio = $this->coefReal($coefPropioRaw);
-            $coefPoderes = $this->coefReal($coefPoderesRaw);
-            $coefTotal = $this->coefReal($coefPropioRaw + $coefPoderesRaw);
-
-            $estado = $g->rc_estado ?? '';
-            $controlNumero = $g->control_numero_snapshot ?? ($g->g_control_numero ?? '');
-            $controlSerial = $g->control_serial_snapshot ?? ($g->g_control_serial ?? '');
-
             $rows[] = [
                 $g->cabeza_inmueble ?? '',
                 $g->cabeza_propietario ?? '',
                 $poderesCount,
-                $coefPropio,
-                $coefPoderes,
-                $coefTotal,
-                $estado,
-                $controlNumero,
-                $controlSerial,
+                $this->coefReal($coefPropioRaw),
+                $this->coefReal($coefPoderesRaw),
+                $this->coefReal($coefPropioRaw + $coefPoderesRaw),
+                $g->rc_estado ?? '',
+                $g->control_numero_snapshot ?? ($g->g_control_numero ?? ''),
+                $g->control_serial_snapshot ?? ($g->g_control_serial ?? ''),
             ];
 
-            $totalCoefPropio += $coefPropioRaw;
+            $totalCoefPropio  += $coefPropioRaw;
             $totalCoefPoderes += $coefPoderesRaw;
-            $totalCoefFinal += ($coefPropioRaw + $coefPoderesRaw);
+            $totalCoefFinal   += ($coefPropioRaw + $coefPoderesRaw);
         }
 
         $rows[] = [''];
-        $rows[] = [
-            'TOTAL',
-            '',
-            '',
-            round($totalCoefPropio, 2),
-            round($totalCoefPoderes, 2),
-            round($totalCoefFinal, 2),
-            '',
-            '',
-            '',
-        ];
+        $rows[] = ['TOTAL', '', '', round($totalCoefPropio, 2), round($totalCoefPoderes, 2), round($totalCoefFinal, 2), '', '', ''];
 
         return $rows;
     }
@@ -774,23 +947,74 @@ class InformePoderesDetalleSheet implements FromArray, WithTitle, \Maatwebsite\E
 
     public function columnFormats(): array
     {
-        return [
-            'A' => '@',
-            'D' => '@',
-            'C' => '0.00',
-            'F' => '0.00',
-        ];
+        $tq = DB::table('eventos')->where('id', $this->eventoId)->value('tipo_quorum') ?? 'coeficiente';
+        return $tq === 'nominal'
+            ? ['A' => '@', 'D' => '@', 'C' => '0', 'F' => '0']
+            : ['A' => '@', 'D' => '@', 'C' => '0.00', 'F' => '0.00'];
     }
 
     private array $blocks = [];
 
     public function array(): array
     {
+        $tipoQuorum = DB::table('eventos')->where('id', $this->eventoId)->value('tipo_quorum') ?? 'coeficiente';
+
         $rows = [];
 
+        if ($tipoQuorum === 'nominal') {
+            $rows[] = ['PODERES · DETALLE POR CABEZA (MODO NOMINAL)'];
+            $rows[] = [''];
+            $rows[] = ['Cabeza (nombre)', 'Cédula cabeza', '# Poderes', 'Apoderado (nombre)', 'Apoderado (cédula)', ''];
+
+            $items = DB::table('representacion_miembros_nominal as rm')
+                ->join('representacion_grupos_nominal as g', 'g.id', '=', 'rm.grupo_id')
+                ->join('evento_personas as cabeza', 'cabeza.id', '=', 'g.cabeza_persona_id')
+                ->join('evento_personas as ap', 'ap.id', '=', 'rm.persona_id')
+                ->where('rm.evento_id', $this->eventoId)
+                ->where('rm.es_cabeza', 0)
+                ->orderBy('cabeza.nombre')
+                ->orderBy('ap.nombre')
+                ->get([
+                    'cabeza.nombre as cabeza_nombre',
+                    'cabeza.cedula as cabeza_cedula',
+                    'ap.nombre as ap_nombre',
+                    'ap.cedula as ap_cedula',
+                ]);
+
+            $byCabeza = $items->groupBy('cabeza_nombre');
+
+            foreach ($byCabeza as $cabezaNombre => $list) {
+                $blockStart   = count($rows) + 1;
+                $cedulaCabeza = $list->first()->cabeza_cedula ?? '';
+                $poderesCnt   = count($list);
+
+                $rows[] = ['CABEZA', $cabezaNombre, $poderesCnt, $cedulaCabeza, '', ''];
+                $rows[] = ['', '', '', '', '', ''];
+
+                foreach ($list as $it) {
+                    $rows[] = [
+                        (string) $cabezaNombre,
+                        $cedulaCabeza,
+                        '',
+                        (string) ($it->ap_nombre ?? ''),
+                        $it->ap_cedula ?? '',
+                        '',
+                    ];
+                }
+
+                $rows[] = ['', '', '', '', 'Subtotal apoderados:', $poderesCnt];
+                $rows[] = [''];
+                $blockEnd = count($rows);
+                $this->blocks[] = [$blockStart, $blockEnd];
+                $rows[] = [''];
+            }
+
+            return $rows;
+        }
+
+        // ── MODO COEFICIENTE ─────────────────────────────────────────
         $rows[] = ['PODERES · DETALLE POR CABEZA'];
         $rows[] = [''];
-
         $rows[] = ['Cabeza (inmueble)', 'Propietario cabeza', 'Coef cabeza', 'Apoderado (inmueble)', 'Apoderado (propietario)', 'Coef apoderado'];
 
         $items = DB::table('representacion_miembros as rm')
@@ -824,7 +1048,7 @@ class InformePoderesDetalleSheet implements FromArray, WithTitle, \Maatwebsite\E
             $sumAp = 0.0;
 
             foreach ($list as $it) {
-                $coef = $this->coefReal($it->ap_coef);
+                $coef   = $this->coefReal($it->ap_coef);
                 $sumAp += (float) ($it->ap_coef ?? 0);
 
                 $rows[] = [
@@ -943,11 +1167,52 @@ class InformeAusentesSheet implements FromArray, WithTitle, \Maatwebsite\Excel\C
 
     public function array(): array
     {
+        $tipoQuorum = DB::table('eventos')->where('id', $this->eventoId)->value('tipo_quorum') ?? 'coeficiente';
+
         $rows = [];
 
+        if ($tipoQuorum === 'nominal') {
+            $rows[] = ['AUSENTES (NO REGISTRADOS - MODO NOMINAL)'];
+            $rows[] = [''];
+            $rows[] = ['Cédula', 'Nombre', 'Teléfono', 'Correo', '', ''];
+
+            $ausentes = DB::table('evento_personas as ep')
+                ->where('ep.evento_id', $this->eventoId)
+                ->whereNotExists(function ($q) {
+                    $q->select(DB::raw(1))
+                        ->from('registros_checkin as rc')
+                        ->whereColumn('rc.persona_id', 'ep.id')
+                        ->where('rc.evento_id', $this->eventoId)
+                        ->whereIn('rc.estado', ['CHECKED_IN', 'RETIRADO']);
+                })
+                ->whereNotExists(function ($q) {
+                    $q->select(DB::raw(1))
+                        ->from('representacion_miembros_nominal as rm')
+                        ->whereColumn('rm.persona_id', 'ep.id')
+                        ->where('rm.evento_id', $this->eventoId)
+                        ->where('rm.es_cabeza', 0);
+                })
+                ->orderBy('ep.nombre')
+                ->get(['ep.cedula', 'ep.nombre', 'ep.telefono', 'ep.correo']);
+
+            foreach ($ausentes as $a) {
+                $rows[] = [
+                    $a->cedula ?? '',
+                    $a->nombre ?? '',
+                    $a->telefono ?? '',
+                    $a->correo ?? '',
+                    '',
+                    '',
+                ];
+            }
+
+            $rows[] = [''];
+            return $rows;
+        }
+
+        // ── MODO COEFICIENTE ─────────────────────────────────────────
         $rows[] = ['AUSENTES (NO REGISTRADOS)'];
         $rows[] = [''];
-
         $rows[] = ['Inmueble', 'Propietario', 'Coeficiente', 'Asistente', 'Celular', 'Correo'];
 
         $ausentes = DB::table('evento_padron as ep')
@@ -988,7 +1253,6 @@ class InformeAusentesSheet implements FromArray, WithTitle, \Maatwebsite\Excel\C
         }
 
         $rows[] = [''];
-
         return $rows;
     }
 
