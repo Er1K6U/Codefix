@@ -12,6 +12,7 @@ class Index extends Component
     public string $copyText = '';
     public ?string $msg = null;
     public float $totalCoef = 0.0;
+    public string $tipoQuorum = 'coeficiente';
 
 
     public function mount(): void
@@ -39,9 +40,79 @@ class Index extends Component
 
     private function loadRows(): void
     {
-        $eid = app(EventContext::class)->eventoId();
+        $ctx = app(EventContext::class);
+        $eid = $ctx->eventoId();
+        $this->tipoQuorum = $ctx->tipoQuorum();
 
-        // Traemos solo los que tuvieron check-in real (CHECKED_IN o RETIRADO)
+        $this->rows = [];
+        $this->totalCoef = 0.0;
+        $lines = [];
+
+        if ($this->tipoQuorum === 'nominal') {
+            $lastPerPersona = DB::table('registros_checkin')
+                ->selectRaw('MAX(id) as last_id')
+                ->where('evento_id', $eid)
+                ->whereIn('estado', ['CHECKED_IN', 'RETIRADO'])
+                ->whereNotNull('persona_id')
+                ->groupBy('persona_id');
+
+            $items = DB::table('registros_checkin as rc')
+                ->joinSub($lastPerPersona, 'u', fn($j) => $j->on('rc.id', '=', 'u.last_id'))
+                ->join('evento_personas as ep', 'ep.id', '=', 'rc.persona_id')
+                ->leftJoin('controles as c', function ($join) {
+                    $join->on('c.evento_id', '=', 'rc.evento_id')
+                        ->where(function ($q) {
+                            $q->whereColumn('c.id', 'rc.control_id')
+                                ->orWhereColumn('c.numero', 'rc.control_numero_snapshot');
+                        });
+                })
+                ->where('rc.evento_id', $eid)
+                ->whereIn('rc.estado', ['CHECKED_IN', 'RETIRADO'])
+                ->orderBy('ep.nombre')
+                ->get([
+                    'rc.id as registro_id',
+                    'rc.estado',
+                    'rc.control_numero_snapshot',
+                    'rc.control_serial_snapshot',
+                    'rc.coef_total_snapshot',
+                    'ep.cedula',
+                    'ep.nombre',
+                    'c.serial as control_serial_db',
+                ]);
+
+            foreach ($items as $it) {
+                $controlNumero = $it->control_numero_snapshot ?? '';
+                $controlCodigo = $it->control_serial_snapshot ?? ($it->control_serial_db ?? '');
+                $votos = ($it->coef_total_snapshot !== null && $it->coef_total_snapshot !== '')
+                    ? (int) round((float) $it->coef_total_snapshot)
+                    : 1;
+
+                $this->totalCoef += $votos;
+
+                $row = [
+                    'control_numero' => $controlNumero,
+                    'codigo'         => $controlCodigo,
+                    'inmueble'       => (string) ($it->cedula ?? ''),
+                    'propietario'    => (string) ($it->nombre ?? ''),
+                    'coef'           => (string) $votos,
+                    'estado'         => $it->estado,
+                ];
+
+                $this->rows[] = $row;
+                $lines[] = implode("\t", [
+                    $row['codigo'],
+                    $row['control_numero'],
+                    $row['inmueble'],
+                    $row['propietario'],
+                    $row['coef'],
+                ]);
+            }
+
+            $this->copyText = implode("\n", $lines);
+            return;
+        }
+
+        // ── MODO COEFICIENTE ──────────────────────────────────────
         $lastPerInmueble = DB::table('registros_checkin')
             ->selectRaw('MAX(id) as last_id')
             ->where('evento_id', $eid)
@@ -53,9 +124,6 @@ class Index extends Component
                 $join->on('rc.id', '=', 'u.last_id');
             })
             ->leftJoin('evento_padron as ep', 'ep.id', '=', 'rc.inmueble_base_id')
-            // Fallback para el codigo del control:
-            // - primero por control_id si existe
-            // - si no, por numero del snapshot (numero es unico por evento)
             ->leftJoin('controles as c', function ($join) {
                 $join->on('c.evento_id', '=', 'rc.evento_id')
                     ->where(function ($q) {
@@ -78,39 +146,28 @@ class Index extends Component
                 'c.serial as control_serial_db',
             ]);
 
-        $this->rows = [];
-        $lines = [];
-        $this->totalCoef = 0.0;
-
         foreach ($items as $it) {
             $controlNumero = $it->control_numero_snapshot ?? '';
-
-            // ✅ Código: snapshot si existe, si no el de la tabla controles
             $controlCodigo = $it->control_serial_snapshot ?? ($it->control_serial_db ?? '');
-
             $inmuebleCabeza = $it->cabeza_inmueble_snapshot ?: ($it->inmueble_padron ?? '');
             $propietario = $it->propietario_padron ?? '';
 
-            // Para sumar total (real)
             if ($it->coef_total_snapshot !== null && $it->coef_total_snapshot !== '') {
                 $this->totalCoef += (float) $it->coef_total_snapshot;
             }
 
-            // Para mostrar en formato 3 dígitos
             $coef = $this->formatCoef($it->coef_total_snapshot);
 
             $row = [
                 'control_numero' => $controlNumero,
-                'codigo' => $controlCodigo,
-                'inmueble' => $inmuebleCabeza,
-                'propietario' => $propietario,
-                'coef' => $coef,
-                'estado' => $it->estado,
+                'codigo'         => $controlCodigo,
+                'inmueble'       => $inmuebleCabeza,
+                'propietario'    => $propietario,
+                'coef'           => $coef,
+                'estado'         => $it->estado,
             ];
 
             $this->rows[] = $row;
-
-            // TSV (4 cols + propietario ahora serán 5 cols)
             $lines[] = implode("\t", [
                 $row['codigo'],
                 $row['control_numero'],

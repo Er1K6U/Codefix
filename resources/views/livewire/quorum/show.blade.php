@@ -35,31 +35,40 @@
 
                 {{-- KPIs --}}
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    @foreach ([
-                        ['Controles activos', (int)($controlesActivos ?? 0), '#0F3D4C', 'count'],
-                        ['Máximo alcanzado', (float)$quorumMax, '#2E2E2E', 'pct'],
-                        ['Retirado', (float)$quorumRetirado, '#d32f57', 'pct'],
-                    ] as [$label, $value, $color, $type])
+                    @php
+                        if ($tipoQuorum === 'nominal') {
+                            $kpis = [
+                                ['Controles activos',  (int)($controlesActivos ?? 0),                   '#0F3D4C', 'count', null],
+                                ['Máx. habilitadas',   ($personasCheckin + $personasRetiradas) . ' / ' . $personasTotal, '#2E2E2E', 'text',  null],
+                                ['Retiradas',          $personasRetiradas,                              '#d32f57', 'count', 'Controles: ' . ($controlesRetiradosUnicos ?? 0)],
+                            ];
+                        } else {
+                            $kpis = [
+                                ['Controles activos',  (int)($controlesActivos ?? 0), '#0F3D4C', 'count', null],
+                                ['Máximo alcanzado',   (float)$quorumMax,             '#2E2E2E', 'pct',   null],
+                                ['Retirado',           (float)$quorumRetirado,        '#d32f57', 'pct',   'Controles: ' . ($controlesRetiradosUnicos ?? 0)],
+                            ];
+                        }
+                    @endphp
+                    @foreach($kpis as [$label, $value, $color, $type, $sub])
                         <div class="bg-white/80 backdrop-blur-md rounded-2xl shadow-xl border border-gray-200 p-6">
                             <p class="text-xs font-semibold text-gray-600">{{ $label }}</p>
 
                             <p class="mt-2 text-3xl font-black" style="color: {{ $color }}">
                                 @if($type === 'pct')
                                     {{ number_format($value, 2) }}%
+                                @elseif($type === 'text')
+                                    {{ $value }}
                                 @else
                                     {{ number_format($value, 0) }}
                                 @endif
                             </p>
 
-                            @if($label === 'Retirado')
+                            @if($sub)
                                 <p class="mt-1 text-[12px] text-gray-600">
-                                    Controles retirados:
-                                    <span class="font-black text-[#d32f57]">
-                                        {{ $controlesRetiradosUnicos ?? 0 }}
-                                    </span>
+                                    {{ $sub }}
                                 </p>
                             @endif
-
                         </div>
                     @endforeach
                 </div>
@@ -69,9 +78,20 @@
                     <div class="flex items-end justify-between gap-4">
                         <div>
                             <p class="text-sm font-semibold text-gray-600">Progreso</p>
-                            <p class="text-5xl font-black text-[#0F3D4C] leading-none">
-                                {{ number_format((float)$quorumActual, 2) }}%
-                            </p>
+                            @if($tipoQuorum === 'nominal')
+                                <p class="text-5xl font-black text-[#0F3D4C] leading-none">
+                                    {{ $personasCheckin }}
+                                    <span class="text-2xl font-semibold text-gray-400">/ {{ $personasTotal }}</span>
+                                </p>
+                                <p class="mt-1 text-sm text-gray-500">
+                                    personas &nbsp;·&nbsp;
+                                    <span class="text-gray-400">{{ number_format((float)$quorumActual, 2) }}%</span>
+                                </p>
+                            @else
+                                <p class="text-5xl font-black text-[#0F3D4C] leading-none">
+                                    {{ number_format((float)$quorumActual, 2) }}%
+                                </p>
+                            @endif
                         </div>
                     </div>
 
@@ -179,7 +199,7 @@
                                         </p>
 
                                         <p class="{{ $isNew ? 'text-lg' : 'text-base' }} font-black text-[#2E2E2E] truncate">
-                                            Inmueble {{ $item['label'] ?? '—' }}
+                                            {{ $tipoQuorum === 'nominal' ? 'Persona' : 'Inmueble' }} {{ $item['label'] ?? '—' }}
                                         </p>
 
                                         @if($isNew)
