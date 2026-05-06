@@ -13,6 +13,7 @@ class RetiroReingreso extends Component
     // ===== Contexto =====
     public ?int $eventoId = null;
     public ?string $eventoTitulo = null;
+    public string $tipoQuorum = 'coeficiente';
 
     // ===== Inputs =====
     public ?string $retiroNumero = null;
@@ -31,6 +32,7 @@ class RetiroReingreso extends Component
     public ?string $reemplazoInfoNombre = null;
     public ?string $reemplazoInfoTelefono = null;
     public ?string $reemplazoInfoInmueble = null;
+    public ?string $reemplazoInfoCedula = null;   // nominal: cédula de la persona
     public ?string $reemplazoInfoEstadoRegistro = null;
     public ?string $reemplazoInfoEstadoControl = null;
     public ?int $reemplazoRegistroId = null;
@@ -47,6 +49,7 @@ class RetiroReingreso extends Component
 
     public ?string $consultaInmueble = null;
     public ?string $consultaPropietario = null;
+    public ?string $consultaCedula = null;        // nominal: cédula de la persona
     public ?string $consultaAsistente = null;
     public ?string $consultaTelefono = null;
     public ?string $consultaEstadoRegistro = null;
@@ -54,12 +57,11 @@ class RetiroReingreso extends Component
     // retiroNumero | reingresoNumero
 
 
-    /**
-     * Sincroniza eventoId con el contexto del puesto (Station -> evento activo)
-     */
     private function syncEventoFromContext(): void
     {
-        $this->eventoId = app(EventContext::class)->eventoId();
+        $ctx = app(EventContext::class);
+        $this->eventoId   = $ctx->eventoId();
+        $this->tipoQuorum = $ctx->tipoQuorum();
     }
 
     public function mount(): void
@@ -159,14 +161,23 @@ class RetiroReingreso extends Component
                         'updated_at' => now(),
                     ]);
 
-                $inmueble = $registro->cabeza_inmueble_snapshot ?? $registro->inmueble_base_id ?? '—';
-                $coef = $registro->coef_total_snapshot ?? 0;
-
-                $this->openModal(
-                    'Control retirado',
-                    "Control #{$num} retirado correctamente.\nInmueble/Grupo: {$inmueble}\nCoef descontado: " . number_format((float) $coef, 4),
-                    'success'
-                );
+                if ($this->tipoQuorum === 'nominal') {
+                    $nombre = $registro->asistente_nombre ?? '—';
+                    $votos  = (int) ($registro->coef_total_snapshot ?? 1);
+                    $this->openModal(
+                        'Control retirado',
+                        "Control #{$num} retirado correctamente.\nPersona: {$nombre}\nVotos descontados: {$votos}",
+                        'success'
+                    );
+                } else {
+                    $inmueble = $registro->cabeza_inmueble_snapshot ?? $registro->inmueble_base_id ?? '—';
+                    $coef     = $registro->coef_total_snapshot ?? 0;
+                    $this->openModal(
+                        'Control retirado',
+                        "Control #{$num} retirado correctamente.\nInmueble/Grupo: {$inmueble}\nCoef descontado: " . number_format((float) $coef, 4),
+                        'success'
+                    );
+                }
             });
 
         } catch (Throwable $e) {
@@ -264,14 +275,23 @@ class RetiroReingreso extends Component
                         'updated_at' => now(),
                     ]);
 
-                $inmueble = $registro->cabeza_inmueble_snapshot ?? $registro->inmueble_base_id ?? '—';
-                $coef = $registro->coef_total_snapshot ?? 0;
-
-                $this->openModal(
-                    'Control reingresado',
-                    "Control #{$num} reingresado correctamente.\nInmueble/Grupo: {$inmueble}\nCoef sumado: " . number_format((float) $coef, 4),
-                    'success'
-                );
+                if ($this->tipoQuorum === 'nominal') {
+                    $nombre = $registro->asistente_nombre ?? '—';
+                    $votos  = (int) ($registro->coef_total_snapshot ?? 1);
+                    $this->openModal(
+                        'Control reingresado',
+                        "Control #{$num} reingresado correctamente.\nPersona: {$nombre}\nVotos sumados: {$votos}",
+                        'success'
+                    );
+                } else {
+                    $inmueble = $registro->cabeza_inmueble_snapshot ?? $registro->inmueble_base_id ?? '—';
+                    $coef     = $registro->coef_total_snapshot ?? 0;
+                    $this->openModal(
+                        'Control reingresado',
+                        "Control #{$num} reingresado correctamente.\nInmueble/Grupo: {$inmueble}\nCoef sumado: " . number_format((float) $coef, 4),
+                        'success'
+                    );
+                }
             });
 
         } catch (Throwable $e) {
@@ -294,6 +314,7 @@ class RetiroReingreso extends Component
         $this->reemplazoInfoNombre = null;
         $this->reemplazoInfoTelefono = null;
         $this->reemplazoInfoInmueble = null;
+        $this->reemplazoInfoCedula = null;
         $this->reemplazoInfoEstadoRegistro = null;
         $this->reemplazoInfoEstadoControl = null;
         $this->reemplazoRegistroId = null;
@@ -342,12 +363,22 @@ class RetiroReingreso extends Component
         $this->reemplazoControlId = (int) $control->id;
         $this->reemplazoRegistroId = (int) $registro->id;
 
-        $this->reemplazoInfoNombre = $registro->asistente_nombre ?? '—';
+        $this->reemplazoInfoNombre   = $registro->asistente_nombre ?? '—';
         $this->reemplazoInfoTelefono = $registro->asistente_telefono ?? '—';
-        $this->reemplazoInfoInmueble = (string) ($registro->cabeza_inmueble_snapshot ?? $registro->inmueble_base_id ?? '—');
+
+        if ($this->tipoQuorum === 'nominal' && $registro->persona_id) {
+            $persona = DB::table('evento_personas')
+                ->where('id', (int) $registro->persona_id)
+                ->first(['cedula']);
+            $this->reemplazoInfoCedula  = $persona?->cedula ?? '—';
+            $this->reemplazoInfoInmueble = null;
+        } else {
+            $this->reemplazoInfoInmueble = (string) ($registro->cabeza_inmueble_snapshot ?? $registro->inmueble_base_id ?? '—');
+            $this->reemplazoInfoCedula   = null;
+        }
 
         $this->reemplazoInfoEstadoRegistro = (string) ($registro->estado ?? '—');
-        $this->reemplazoInfoEstadoControl = (string) ($control->estado ?? '—');
+        $this->reemplazoInfoEstadoControl  = (string) ($control->estado ?? '—');
 
         // Deja listo el foco en el nuevo control
         $this->dispatch('focus-field', id: 'reemplazoNumeroNuevo');
@@ -582,6 +613,7 @@ class RetiroReingreso extends Component
             $this->reemplazoInfoNombre = null;
             $this->reemplazoInfoTelefono = null;
             $this->reemplazoInfoInmueble = null;
+            $this->reemplazoInfoCedula = null;
             $this->reemplazoInfoEstadoRegistro = null;
             $this->reemplazoInfoEstadoControl = null;
         }
@@ -599,6 +631,7 @@ class RetiroReingreso extends Component
         $this->consultaReady = false;
         $this->consultaInmueble = null;
         $this->consultaPropietario = null;
+        $this->consultaCedula = null;
         $this->consultaAsistente = null;
         $this->consultaTelefono = null;
         $this->consultaEstadoRegistro = null;
@@ -644,21 +677,33 @@ class RetiroReingreso extends Component
         }
 
         // 3) Pintamos datos disponibles desde el registro
-        $this->consultaInmueble = (string) ($registro->cabeza_inmueble_snapshot ?? $registro->inmueble_base_id ?? '—');
-        $this->consultaAsistente = (string) ($registro->asistente_nombre ?? '—');
-        $this->consultaTelefono = (string) ($registro->asistente_telefono ?? '—');
+        $this->consultaAsistente      = (string) ($registro->asistente_nombre ?? '—');
+        $this->consultaTelefono       = (string) ($registro->asistente_telefono ?? '—');
         $this->consultaEstadoRegistro = (string) ($registro->estado ?? '—');
 
-        // 4) Propietario: depende de tu padrón/tabla. Por ahora lo dejamos “—”.
-        // En el siguiente paso lo conectamos a la tabla real del padrón para traer el propietario.
-        $inmuebleLabel = (string) ($registro->cabeza_inmueble_snapshot ?? $registro->inmueble_base_id ?? '');
-
-        $padron = DB::table('evento_padron')
-            ->where('evento_id', $eid)
-            ->where('inmueble', $inmuebleLabel)
-            ->first(['propietario']);
-
-        $this->consultaPropietario = $padron?->propietario ?: '—';
+        if ($this->tipoQuorum === 'nominal') {
+            // Modo nominal: mostramos cédula de la persona (inmueble no aplica)
+            if ($registro->persona_id) {
+                $persona = DB::table('evento_personas')
+                    ->where('id', (int) $registro->persona_id)
+                    ->first(['cedula']);
+                $this->consultaCedula = $persona?->cedula ?? '—';
+            } else {
+                $this->consultaCedula = '—';
+            }
+            $this->consultaInmueble    = null;
+            $this->consultaPropietario = null;
+        } else {
+            // Modo coeficiente: inmueble + propietario del padrón
+            $this->consultaInmueble = (string) ($registro->cabeza_inmueble_snapshot ?? $registro->inmueble_base_id ?? '—');
+            $inmuebleLabel = (string) ($registro->cabeza_inmueble_snapshot ?? $registro->inmueble_base_id ?? '');
+            $padron = DB::table('evento_padron')
+                ->where('evento_id', $eid)
+                ->where('inmueble', $inmuebleLabel)
+                ->first(['propietario']);
+            $this->consultaPropietario = $padron?->propietario ?: '—';
+            $this->consultaCedula      = null;
+        }
 
 
         $this->consultaReady = true;
