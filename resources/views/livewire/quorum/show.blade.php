@@ -13,18 +13,16 @@
     <div class="relative z-10 max-w-7xl mx-auto px-6 py-8">
 
         {{-- Header --}}
-        <div class="flex items-start justify-between gap-6 mb-10">
-            <div>
-                <h1 class="text-3xl md:text-4xl font-black text-[#2E2E2E]">
-                    {{ $eventoTitulo }}
-                </h1>
-            </div>
-
+        <div class="flex items-center justify-center gap-6 mb-10">
             @if($eventoImagen)
-                <div class="shrink-0 w-20 h-20 rounded-2xl border border-gray-200 shadow bg-white/90 backdrop-blur overflow-hidden">
+                <div class="shrink-0 w-16 h-16 rounded-2xl border border-gray-200 shadow bg-white/90 backdrop-blur overflow-hidden">
                     <img src="{{ asset('storage/' . $eventoImagen) }}" class="w-full h-full object-cover" alt="Evento">
                 </div>
             @endif
+
+            <h1 class="text-3xl md:text-4xl font-black text-[#2E2E2E] text-center">
+                {{ $eventoTitulo }}
+            </h1>
         </div>
 
         {{-- LAYOUT: izquierda KPIs+barra / derecha feed apilado --}}
@@ -122,7 +120,7 @@
 
             {{-- DERECHA: Feed apilado (máx 10) --}}
             <div class="lg:pt-2">
-                <div class="sticky top-28">
+                <div class="sticky top-6">
                     <div class="flex items-end justify-between mb-3">
                         <div>
                             <p class="text-xs font-semibold text-gray-600">Llegadas</p>
