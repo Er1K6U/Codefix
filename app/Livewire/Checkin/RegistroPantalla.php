@@ -158,15 +158,19 @@ class RegistroPantalla extends Component
             ])->toArray();
         } else {
             $rows = DB::table('evento_padron')
-                ->select('id', 'inmueble')
+                ->select('id', 'inmueble', 'propietario')
                 ->where('evento_id', $this->eventoId)
-                ->where('inmueble', 'like', "%{$term}%")
+                ->where(function ($q) use ($term) {
+                    $q->where('inmueble', 'like', "%{$term}%")
+                      ->orWhere('propietario', 'like', "%{$term}%");
+                })
                 ->limit(10)
                 ->get();
 
             $this->results = $rows->map(fn($r) => [
-                'id'    => (int) $r->id,
-                'label' => (string) $r->inmueble,
+                'id'       => (int) $r->id,
+                'label'    => (string) $r->inmueble,
+                'sublabel' => (string) $r->propietario,
             ])->toArray();
         }
     }
@@ -2115,24 +2119,14 @@ class RegistroPantalla extends Component
             }
         });
 
-        // originales
-        $this->asistenteNombreOriginal = $this->asistenteNombre;
-        $this->asistenteTelefonoOriginal = $this->asistenteTelefono;
-        $this->asistenteCorreoOriginal = $this->asistenteCorreo;
-
-        // ✅ ya quedó finalizado, limpia el pendiente (para que no intenten “re-usarlo”)
-        $this->controlNumeroInput = null;
-        $this->controlPreviewSerial = null;
-        $this->controlPreviewEstado = null;
-        $this->controlPendienteNumero = null;
-        $this->controlPendienteId = null;
-
+        $this->clearSelection();
         $this->checkinMsg = '✅ Check-in cerrado correctamente.';
-        $this->dirtyGrupo = false;
-        $this->dirtyControl = false;
+    }
 
-        // Si el modal estaba abierto por “debes guardar”, lo cerramos
-        $this->confirmSaveRequired = false;
+    public function closeCheckinMsg(): void
+    {
+        $this->checkinMsg = null;
+        $this->dispatch('focus-field', id: 'checkinSearch');
     }
 
     public function hasUnsavedChanges(): bool
