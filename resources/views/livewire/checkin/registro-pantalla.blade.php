@@ -20,7 +20,7 @@
                         <div class="mt-3 flex justify-end">
                             <button
                                 type="button"
-                                wire:click="$set('checkinMsg', null)"
+                                wire:click="closeCheckinMsg"
                                 class="px-5 py-2 rounded-xl bg-black text-white font-semibold hover:bg-black/90 transition"
                             >
                                 Perfecto
@@ -111,10 +111,11 @@
                 <div class="w-[360px] max-w-full">
                     <div class="relative">
                         <input
+                            id="checkinSearch"
                             type="text"
                             wire:model.live="search"
                             @disabled($registroId && $this->hasPendingChanges())
-                            placeholder="{{ $tipoQuorum === 'nominal' ? 'Busca por cédula o nombre' : 'Busca inmueble' }}"
+                            placeholder="{{ $tipoQuorum === 'nominal' ? 'Busca por cédula o nombre' : 'Busca por inmueble o propietario' }}"
                             class="w-full rounded-xl border-gray-300 focus:ring-2 focus:ring-indigo-300 disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
                         />
 
@@ -125,7 +126,7 @@
                                         wire:click="{{ $tipoQuorum === 'nominal' ? 'requestSelectPersona' : 'requestSelectInmueble' }}({{ $r['id'] }})"
                                         class="w-full text-left px-4 py-3 hover:bg-gray-50">
                                         <div class="font-semibold text-gray-900">{{ $r['label'] }}</div>
-                                        <div class="text-xs text-gray-500">Seleccionar</div>
+                                        <div class="text-xs text-gray-500">{{ $r['sublabel'] ?? 'Seleccionar' }}</div>
                                     </button>
                                 @endforeach
                             </div>
@@ -544,3 +545,12 @@
         </div>
     @endif
 </div>
+<script>
+    document.addEventListener('livewire:init', () => {
+        Livewire.on('focus-field', (payload) => {
+            const id = payload?.id;
+            if (!id) return;
+            setTimeout(() => document.getElementById(id)?.focus(), 80);
+        });
+    });
+</script>
