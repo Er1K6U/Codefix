@@ -212,7 +212,7 @@
 
             @if(!$registroId)
                 <div class="mt-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
-                    Busca un inmueble arriba para cargar los datos.
+                    {{ $tipoQuorum === 'nominal' ? 'Busca una persona arriba para cargar los datos.' : 'Busca un inmueble arriba para cargar los datos.' }}
                 </div>
             @endif
         </div>
@@ -223,7 +223,7 @@
         <div class="flex items-start justify-between gap-6">
             <div>
                 <h2 class="text-lg font-black text-gray-900">Representación / Poderes</h2>
-                <p class="text-sm text-gray-600 mt-1">Cabeza + inmuebles representados.</p>
+                <p class="text-sm text-gray-600 mt-1">{{ $tipoQuorum === 'nominal' ? 'Cabeza + personas representadas.' : 'Cabeza + inmuebles representados.' }}</p>
             </div>
 
             <div class="text-right">
@@ -272,7 +272,11 @@
                                                 <div class="text-xs text-gray-500 truncate">{{ $r['propietario'] }}</div>
                                             </div>
                                             <div class="text-xs font-semibold text-gray-700 shrink-0">
-                                                coef: {{ number_format($r['coef'], 4, '.', '') }}
+                                                @if($tipoQuorum === 'nominal')
+                                                    votos: 1
+                                                @else
+                                                    coef: {{ number_format($r['coef'], 4, '.', '') }}
+                                                @endif
                                             </div>
                                         </div>
                                     </button>
@@ -349,7 +353,7 @@
             </div>
         @else
             <div class="mt-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
-                Aquí aparecerá la representación cuando selecciones un inmueble.
+                {{ $tipoQuorum === 'nominal' ? 'Aquí aparecerá la representación cuando selecciones una persona.' : 'Aquí aparecerá la representación cuando selecciones un inmueble.' }}
             </div>
         @endif
     </div>
@@ -410,12 +414,12 @@
                         @endif
                     @else
                         <div class="mt-1 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                            Este inmueble es un <span class="font-semibold">PODER</span>. El control se gestiona desde la <span class="font-semibold">cabeza</span>.
+                            {{ $tipoQuorum === 'nominal' ? 'Esta persona es un' : 'Este inmueble es un' }} <span class="font-semibold">PODER</span>. El control se gestiona desde la <span class="font-semibold">cabeza</span>.
                         </div>
                     @endif
                 @else
                     <div class="mt-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
-                        Aquí aparecerá la validación del control cuando selecciones un inmueble.
+                        {{ $tipoQuorum === 'nominal' ? 'Aquí aparecerá la validación del control cuando selecciones una persona.' : 'Aquí aparecerá la validación del control cuando selecciones un inmueble.' }}
                     </div>
                 @endif
             </div>
@@ -496,7 +500,7 @@
                 <h3 class="text-lg font-black text-gray-900">Cambios pendientes</h3>
                 <p class="text-sm text-gray-600 mt-2">
                     Hay cambios en poderes y/o control preparado. Debes <span class="font-semibold">Guardar asistente</span>
-                    antes de cambiar de inmueble o limpiar.
+                    antes de cambiar de {{ $tipoQuorum === 'nominal' ? 'persona' : 'inmueble' }} o limpiar.
                 </p>
 
                 <div class="mt-3 flex justify-end gap-3">

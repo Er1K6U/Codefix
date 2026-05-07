@@ -898,10 +898,14 @@ class RegistroPantalla extends Component
                 $reg = DB::table('registros_checkin')
                     ->where('evento_id', $this->eventoId)
                     ->where('id', (int) $c->asignado_a_registro_id)
-                    ->first(['inmueble_base_id']);
+                    ->first(['inmueble_base_id', 'persona_id']);
 
                 if ($reg) {
-                    $inm = $this->labelInmueble((int) $reg->inmueble_base_id);
+                    if ($this->tipoQuorum === 'nominal' && !is_null($reg->persona_id)) {
+                        $inm = $this->labelPersona((int) $reg->persona_id);
+                    } else {
+                        $inm = $this->labelInmueble((int) $reg->inmueble_base_id);
+                    }
                     $msg .= " Actualmente está asignado a: {$inm}.";
                 }
             }
