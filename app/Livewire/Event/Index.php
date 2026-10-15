@@ -79,7 +79,13 @@ class Index extends Component
 
         session()->flash('ok', 'Evento activo en este puesto actualizado.');
 
-        return redirect()->route('checkin');
+        return $this->irAPantallaDelPuesto();
+    }
+
+    // Tras activar el puesto: check-in para quien lo opera (ADMIN/OPERADOR); el resto, al quórum.
+    private function irAPantallaDelPuesto()
+    {
+        return redirect()->route(Gate::allows('checkin.usar') ? 'checkin' : 'quorum.show');
     }
 
     public function cancelChange(): void
@@ -113,7 +119,7 @@ class Index extends Component
 
         session()->flash('ok', 'Evento activo en este puesto actualizado.');
 
-        return redirect()->route('checkin');
+        return $this->irAPantallaDelPuesto();
     }
 
     // ✅ Quitar evento activo de “este puesto” (sesión)

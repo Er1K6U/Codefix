@@ -16,10 +16,12 @@ class ControlService
     {
         DB::transaction(function () use ($eventoId, $registroId, $numero) {
 
-            // 1) Validar que el registro exista y pertenezca al evento
+            // 1) Validar que el registro exista y pertenezca al evento. Se bloquea antes que el control
+            // (mismo orden que el check-in y la importación: registros → controles).
             $registro = DB::table('registros_checkin')
                 ->where('id', $registroId)
                 ->where('evento_id', $eventoId)
+                ->lockForUpdate()
                 ->first();
 
             if (!$registro) {

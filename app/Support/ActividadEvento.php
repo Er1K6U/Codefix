@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\DB;
  * Protección contra reimportaciones destructivas (--wipe) sobre una asamblea con actividad.
  *
  * Debe llamarse dentro de la transacción de la importación, antes del primer borrado.
+ * Bloquea primero la fila del evento (exclusiva); el check-in la toma compartida antes de crear
+ * actividad nueva, así que importación y selección se ordenan siempre igual y no se interbloquean.
  * Lee con bloqueo (SELECT ... FOR UPDATE) las filas del evento en todas las tablas donde
  * escriben el check-in, los poderes y la entrega de controles. En MySQL (InnoDB, REPEATABLE
  * READ) eso bloquea también los huecos del índice por evento_id, así que ninguna operación
@@ -34,9 +36,19 @@ class ActividadEvento
      */
     public static function exigirSinActividad(int $eventoId, string $reemplazo): void
     {
+        // Primero la fila del evento, en exclusiva: la selección del check-in la toma compartida
+        // antes de crear el primer registro, así que una y otra se esperan sin cruzarse.
+        DB::table('eventos')->where('id', $eventoId)->lockForUpdate()->first(['id']);
+
         $filas = [];
-        foreach (self::TABLAS as $tabla) {
-            $filas[$tabla] = DB::table($tabla)->where('evento_id', $eventoId)->lockForUpdate()->get();
+        $filas['registros_checkin'] = DB::table('registros_checkin')->where('evento_id', $eventoId)->lockForUpdate()->get();
+
+        // Con asistencia ya registrada la respuesta es "no": se cuenta el resto sin bloquearlo, para
+        // no competir por filas que el check-in, los poderes o los retiros estén usando.
+        $bloquear = $filas['registros_checkin']->isEmpty();
+
+        foreach (array_slice(self::TABLAS, 1) as $tabla) {
+            $filas[$tabla] = DB::table($tabla)->where('evento_id', $eventoId)->when($bloquear, fn($q) => $q->lockForUpdate())->get();
         }
 
         $grupoConCheckin = fn($g) => $g->checkin_at !== null || $g->checkin_by !== null

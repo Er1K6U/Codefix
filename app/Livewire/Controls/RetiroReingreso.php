@@ -3,6 +3,8 @@
 namespace App\Livewire\Controls;
 
 use Livewire\Component;
+use Livewire\Attributes\Locked;
+use App\Livewire\Concerns\OperacionDeCheckin;
 use App\Support\EventContext;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -10,9 +12,16 @@ use Throwable;
 
 class RetiroReingreso extends Component
 {
+    use OperacionDeCheckin;
+
+    // #[Locked]: lo calcula el servidor; el navegador no puede cambiarlo (la petición falla sin escribir nada).
+
     // ===== Contexto =====
+    #[Locked]
     public ?int $eventoId = null;
+    #[Locked]
     public ?string $eventoTitulo = null;
+    #[Locked]
     public string $tipoQuorum = 'coeficiente';
 
     // ===== Inputs =====
@@ -29,29 +38,48 @@ class RetiroReingreso extends Component
     public string $modalBody = '';
     public string $focusBackTo = 'retiroNumero';
     // ===== Info control actual (reemplazo) =====
+    #[Locked]
     public ?string $reemplazoInfoNombre = null;
+    #[Locked]
     public ?string $reemplazoInfoTelefono = null;
+    #[Locked]
     public ?string $reemplazoInfoInmueble = null;
+    #[Locked]
     public ?string $reemplazoInfoCedula = null;   // nominal: cédula de la persona
+    #[Locked]
     public ?string $reemplazoInfoEstadoRegistro = null;
+    #[Locked]
     public ?string $reemplazoInfoEstadoControl = null;
+    #[Locked]
     public ?int $reemplazoRegistroId = null;
+    #[Locked]
     public ?int $reemplazoControlId = null;
     // ===== Info control nuevo (reemplazo) =====
+    #[Locked]
     public ?string $reemplazoNuevoEstadoControl = null;
+    #[Locked]
     public ?string $reemplazoNuevoSerial = null;
+    #[Locked]
     public ?int $reemplazoNuevoControlId = null;
+    #[Locked]
     public bool $reemplazoNuevoOk = false;
 
     // ===== Consulta por control =====
     public ?string $consultaNumero = null;
+    #[Locked]
     public bool $consultaReady = false;
 
+    #[Locked]
     public ?string $consultaInmueble = null;
+    #[Locked]
     public ?string $consultaPropietario = null;
+    #[Locked]
     public ?string $consultaCedula = null;        // nominal: cédula de la persona
+    #[Locked]
     public ?string $consultaAsistente = null;
+    #[Locked]
     public ?string $consultaTelefono = null;
+    #[Locked]
     public ?string $consultaEstadoRegistro = null;
 
     // retiroNumero | reingresoNumero
@@ -131,6 +159,7 @@ class RetiroReingreso extends Component
                     })
                     ->orderByDesc('checked_in_at')
                     ->orderByDesc('id')
+                    ->lockForUpdate()
                     ->first();
 
                 if (!$registro) {
@@ -140,6 +169,14 @@ class RetiroReingreso extends Component
 
                 if (($registro->estado ?? null) !== 'CHECKED_IN') {
                     $this->openModal('Ya retirado', "El control #{$num} ya está marcado como retirado (estado actual: {$registro->estado}).", 'info');
+                    return;
+                }
+
+                // Con el registro bloqueado, se bloquea y relee el control (orden registros → controles).
+                $control = DB::table('controles')->where('evento_id', $eid)->where('id', $control->id)->lockForUpdate()->first();
+
+                if (!$control || ($control->estado ?? null) !== 'ASIGNADO') {
+                    $this->openModal('No está asignado', "El control #{$num} cambió de estado mientras se procesaba. Intenta de nuevo.", 'error');
                     return;
                 }
 
@@ -181,7 +218,7 @@ class RetiroReingreso extends Component
             });
 
         } catch (Throwable $e) {
-            $this->openModal('Error', 'Ocurrió un error al retirar el control. Revisa el log para más detalle.', 'error');
+            $this->openModal('Error', $this->mensajeDeError($e, 'retirar el control'), 'error');
             return;
         } finally {
             $this->retiroNumero = null;
@@ -236,6 +273,7 @@ class RetiroReingreso extends Component
                     })
                     ->orderByDesc('checked_in_at')
                     ->orderByDesc('id')
+                    ->lockForUpdate()
                     ->first();
 
                 if (!$registro) {
@@ -250,6 +288,14 @@ class RetiroReingreso extends Component
 
                 if (($registro->estado ?? null) !== 'RETIRADO') {
                     $this->openModal('Estado inválido', "El registro asociado está en estado '{$registro->estado}'. Se esperaba RETIRADO.", 'error');
+                    return;
+                }
+
+                // Con el registro bloqueado, se bloquea y relee el control (orden registros → controles).
+                $control = DB::table('controles')->where('evento_id', $eid)->where('id', $control->id)->lockForUpdate()->first();
+
+                if (!$control || ($control->estado ?? null) !== 'ASIGNADO') {
+                    $this->openModal('No está asignado', "El control #{$num} cambió de estado mientras se procesaba. Intenta de nuevo.", 'error');
                     return;
                 }
 
@@ -295,7 +341,7 @@ class RetiroReingreso extends Component
             });
 
         } catch (Throwable $e) {
-            $this->openModal('Error', 'Ocurrió un error al reingresar el control. Revisa el log para más detalle.', 'error');
+            $this->openModal('Error', $this->mensajeDeError($e, 'reingresar el control'), 'error');
             return;
         } finally {
             $this->reingresoNumero = null;
@@ -495,6 +541,13 @@ class RetiroReingreso extends Component
         try {
             DB::transaction(function () use ($eid, $actual, $nuevo) {
 
+                // Primero el registro y después los controles (mismo orden que el check-in y la importación).
+                $registro = DB::table('registros_checkin')
+                    ->where('evento_id', $eid)
+                    ->where('id', (int) $this->reemplazoRegistroId)
+                    ->lockForUpdate()
+                    ->first();
+
                 // Re-leemos dentro de transacción (estado actual real)
                 $controlViejo = DB::table('controles')
                     ->where('evento_id', $eid)
@@ -527,13 +580,7 @@ class RetiroReingreso extends Component
                     return;
                 }
 
-                // Registro objetivo: el “último válido” que cargamos en pantalla
-                $registro = DB::table('registros_checkin')
-                    ->where('evento_id', $eid)
-                    ->where('id', (int) $this->reemplazoRegistroId)
-                    ->lockForUpdate()
-                    ->first();
-
+                // Registro objetivo: el “último válido” que cargamos en pantalla (bloqueado arriba)
                 if (!$registro) {
                     $this->openModal('Registro no encontrado', 'No encontré el registro asociado para reemplazar.', 'error');
                     return;
@@ -595,7 +642,7 @@ class RetiroReingreso extends Component
             });
 
         } catch (Throwable $e) {
-            $this->openModal('Error', 'Ocurrió un error al reemplazar el control. Revisa el log para más detalle.', 'error');
+            $this->openModal('Error', $this->mensajeDeError($e, 'reemplazar el control'), 'error');
             return;
         } finally {
             // limpiamos inputs y estado de validación para seguir rápido
