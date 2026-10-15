@@ -2,6 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Support\ActividadEvento;
+use App\Support\ReimportacionBloqueada;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -131,13 +133,22 @@ class ImportControlsFromExcel extends Command
             return self::FAILURE;
         }
 
-        DB::transaction(function () use ($eventoId, $wipe, $items) {
-            if ($wipe) {
-                DB::table('controles')->where('evento_id', $eventoId)->delete();
-            }
+        try {
+            DB::transaction(function () use ($eventoId, $wipe, $items) {
+                if ($wipe) {
+                    // Antes del primer borrado: con poderes, asistencia o controles entregados no se reemplaza.
+                    ActividadEvento::exigirSinActividad($eventoId, 'la lista de controles');
 
-            DB::table('controles')->insert($items);
-        });
+                    DB::table('controles')->where('evento_id', $eventoId)->delete();
+                }
+
+                DB::table('controles')->insert($items);
+            });
+        } catch (ReimportacionBloqueada $e) {
+            $this->error($e->getMessage());
+            ActividadEvento::auditarBloqueo($e, 'controls:import-excel');
+            return self::FAILURE;
+        }
 
         $this->info("✅ Controles importados: " . count($items) . " para evento {$eventoId}" . ($wipe ? " (wipe)" : "") . ".");
         return self::SUCCESS;

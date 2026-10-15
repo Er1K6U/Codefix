@@ -1,0 +1,48 @@
+{
+    "pasos": [
+        {
+            "comando": "controls:import-excel",
+            "exit": 1,
+            "salida": "Evento seleccionado: #E1 - Controles\nArchivo controles: archivos\/a\/controles.xlsx\nNo se reemplazó la lista de controles: la asamblea #E1 ya tiene actividad (controles entregados: 1). Se canceló sin borrar nada, para no perder poderes, asistencia ni controles entregados."
+        }
+    ],
+    "foto": {
+        "conteos": {
+            "evento_padron": 0,
+            "representacion_grupos": 0,
+            "representacion_miembros": 0,
+            "evento_personas": 0,
+            "representacion_grupos_nominal": 0,
+            "representacion_miembros_nominal": 0,
+            "controles": 2,
+            "registros_checkin": 0
+        },
+        "evento_padron": [],
+        "representacion_grupos": [],
+        "representacion_miembros": [],
+        "evento_personas": [],
+        "representacion_grupos_nominal": [],
+        "representacion_miembros_nominal": [],
+        "controles": [
+            {
+                "evento": "Controles",
+                "numero": 1,
+                "serial": "VIEJO-1",
+                "estado": "ASIGNADO",
+                "asignado_a_registro_id": null,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Otro",
+                "numero": 1,
+                "serial": "OTRO-1",
+                "estado": "LIBRE",
+                "asignado_a_registro_id": null,
+                "created_at": null,
+                "updated_at": null
+            }
+        ],
+        "registros_checkin": []
+    }
+}

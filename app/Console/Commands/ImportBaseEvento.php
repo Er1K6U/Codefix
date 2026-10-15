@@ -2,35 +2,26 @@
 
 namespace App\Console\Commands;
 
+use App\Support\ActividadEvento;
+use App\Support\ReimportacionBloqueada;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class ImportBaseEvento extends Command
 {
-    protected $signature = 'base:import {--wipe : Borra la base anterior del evento antes de importar}';
+    protected $signature = 'base:import
+                            {evento_id? : Evento destino (obligatorio si hay más de un evento)}
+                            {--wipe : Borra la base anterior del evento antes de importar}';
     protected $description = 'Importa la Base del evento (Excel) a evento_padron y crea grupos base (cabeza sola)';
 
     public function handle(): int
     {
         $wipe = (bool) $this->option('wipe');
 
-        // ✅ MODO EVENTO ÚNICO:
-        // 1) si hay is_active=1 usamos ese
-        // 2) si no, usamos el último evento
-        $evento = DB::table('eventos')
-            ->where('is_active', 1)
-            ->orderByDesc('id')
-            ->first();
+        $evento = $this->eventoDestino();
 
         if (!$evento) {
-            $evento = DB::table('eventos')
-                ->orderByDesc('id')
-                ->first();
-        }
-
-        if (!$evento) {
-            $this->error("No existe ningún evento en la base de datos.");
             return self::FAILURE;
         }
 
@@ -152,50 +143,104 @@ class ImportBaseEvento extends Command
             return self::FAILURE;
         }
 
-        DB::transaction(function () use ($eventoId, $wipe, $data) {
-            if ($wipe) {
-                DB::table('representacion_miembros')->where('evento_id', $eventoId)->delete();
-                DB::table('representacion_grupos')->where('evento_id', $eventoId)->delete();
-                DB::table('evento_padron')->where('evento_id', $eventoId)->delete();
-            }
+        try {
+            DB::transaction(function () use ($eventoId, $wipe, $data) {
+                if ($wipe) {
+                    // Antes del primer borrado: con poderes, asistencia o controles entregados no se reemplaza.
+                    ActividadEvento::exigirSinActividad($eventoId, 'la base de inmuebles');
 
-            foreach (array_chunk($data, 500) as $chunk) {
-                DB::table('evento_padron')->insert($chunk);
-            }
+                    DB::table('representacion_miembros')->where('evento_id', $eventoId)->delete();
+                    DB::table('representacion_grupos')->where('evento_id', $eventoId)->delete();
+                    DB::table('evento_padron')->where('evento_id', $eventoId)->delete();
+                }
 
-            // Crear grupos base: cada inmueble arranca como cabeza de su propio grupo
-            $padron = DB::table('evento_padron')
-                ->select('id')
-                ->where('evento_id', $eventoId)
-                ->get();
+                foreach (array_chunk($data, 500) as $chunk) {
+                    DB::table('evento_padron')->insert($chunk);
+                }
 
-            foreach ($padron as $p) {
-                $grupoId = DB::table('representacion_grupos')->insertGetId([
+                // Crear grupos base: cada inmueble arranca como cabeza de su propio grupo
+                $padron = DB::table('evento_padron')
+                    ->select('id')
+                    ->where('evento_id', $eventoId)
+                    ->get();
+
+                // Por lotes: primero los grupos y luego sus cabezas. El id de cada grupo se busca por su
+                // cabeza (única por evento), sin suponer ids consecutivos.
+                $now = now();
+
+                $gruposData = $padron->map(fn($p) => [
                     'evento_id' => $eventoId,
                     'cabeza_padron_id' => $p->id,
                     'control_numero' => null,
                     'control_serial' => null,
                     'checkin_at' => null,
                     'checkin_by' => null,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ])->all();
 
-                DB::table('representacion_miembros')->insert([
-                    'grupo_id' => $grupoId,
+                foreach (array_chunk($gruposData, 500) as $chunk) {
+                    DB::table('representacion_grupos')->insert($chunk);
+                }
+
+                $grupos = DB::table('representacion_grupos')
+                    ->where('evento_id', $eventoId)
+                    ->pluck('id', 'cabeza_padron_id');
+
+                $miembrosData = $padron->map(fn($p) => [
+                    'grupo_id' => $grupos[$p->id],
                     'evento_id' => $eventoId,
                     'padron_id' => $p->id,
                     'es_cabeza' => true,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-            }
-        });
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ])->all();
+
+                foreach (array_chunk($miembrosData, 500) as $chunk) {
+                    DB::table('representacion_miembros')->insert($chunk);
+                }
+            });
+        } catch (ReimportacionBloqueada $e) {
+            $this->error($e->getMessage());
+            ActividadEvento::auditarBloqueo($e, 'base:import');
+            return self::FAILURE;
+        }
 
         $this->info("✅ Importación OK. Filas: {$count} | Suma coef: " . number_format($sumCoef, 4, '.', ''));
         $this->info("✅ Grupos base creados (1 por inmueble).");
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Evento al que se importa: el indicado, o el único evento de la instalación.
+     * Nunca se elige por is_active ni por ser el más reciente, para no borrar otra asamblea.
+     */
+    private function eventoDestino(): ?object
+    {
+        $id = $this->argument('evento_id');
+
+        if ($id !== null) {
+            $evento = ctype_digit((string) $id) ? DB::table('eventos')->where('id', (int) $id)->first() : null;
+
+            if (!$evento) {
+                $this->error("No existe el evento #{$id}.");
+            }
+
+            return $evento;
+        }
+
+        $eventos = DB::table('eventos')->limit(2)->get();
+
+        if ($eventos->count() === 1) {
+            return $eventos->first();
+        }
+
+        $this->error($eventos->isEmpty()
+            ? "No existe ningún evento en la base de datos."
+            : "Hay varios eventos. Indica el evento destino: php artisan base:import <evento_id>");
+
+        return null;
     }
 
     private function norm(string $s): string

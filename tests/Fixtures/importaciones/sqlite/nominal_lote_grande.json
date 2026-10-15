@@ -1,0 +1,31 @@
+{
+    "pasos": [
+        {
+            "comando": "base:import-nominal",
+            "exit": 0,
+            "salida": "Evento seleccionado: #E1 - Nominal grande\nArchivo nominal: archivos\/a\/personas.xlsx\n✅ Importación nominal OK. Personas: 1201 | Grupos base: 1201"
+        }
+    ],
+    "foto": {
+        "conteos": {
+            "evento_padron": 0,
+            "representacion_grupos": 0,
+            "representacion_miembros": 0,
+            "evento_personas": 1201,
+            "representacion_grupos_nominal": 1201,
+            "representacion_miembros_nominal": 1201,
+            "controles": 0,
+            "registros_checkin": 0
+        },
+        "sha256": {
+            "evento_padron": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "representacion_grupos": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "representacion_miembros": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "evento_personas": "5ff25b2cc2245f6c8a4ce1c1b9f2a3f9d11c4f016f1936f4cba384e479e248a4",
+            "representacion_grupos_nominal": "4b762ec617560b148effaaec17f7031b05c7c785e929293a44745f9e9ff53028",
+            "representacion_miembros_nominal": "d396d4c1330631abe180598bbae19b34cb9de8f9d95ad2eef922aeab1e40487c",
+            "controles": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "registros_checkin": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        }
+    }
+}

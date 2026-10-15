@@ -1,0 +1,90 @@
+{
+    "pasos": [
+        {
+            "comando": "base:import",
+            "exit": 0,
+            "salida": "Evento seleccionado: #E1 - Coef vacio\nArchivo base: archivos\/a\/base.xlsx\n✅ Importación OK. Filas: 2 | Suma coef: 100.0000\n✅ Grupos base creados (1 por inmueble)."
+        }
+    ],
+    "foto": {
+        "conteos": {
+            "evento_padron": 2,
+            "representacion_grupos": 2,
+            "representacion_miembros": 2,
+            "evento_personas": 0,
+            "representacion_grupos_nominal": 0,
+            "representacion_miembros_nominal": 0,
+            "controles": 0,
+            "registros_checkin": 0
+        },
+        "evento_padron": [
+            {
+                "evento": "Coef vacio",
+                "inmueble": "N-1",
+                "propietario": "Nuevo Uno",
+                "coeficiente": 60,
+                "asistente": null,
+                "celular": null,
+                "correo": null,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            },
+            {
+                "evento": "Coef vacio",
+                "inmueble": "N-2",
+                "propietario": "Nuevo Dos",
+                "coeficiente": 40,
+                "asistente": null,
+                "celular": null,
+                "correo": null,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            }
+        ],
+        "representacion_grupos": [
+            {
+                "evento": "Coef vacio",
+                "cabeza": "N-1",
+                "control_numero": null,
+                "control_serial": null,
+                "checkin_at": null,
+                "checkin_by": null,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            },
+            {
+                "evento": "Coef vacio",
+                "cabeza": "N-2",
+                "control_numero": null,
+                "control_serial": null,
+                "checkin_at": null,
+                "checkin_by": null,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            }
+        ],
+        "representacion_miembros": [
+            {
+                "evento": "Coef vacio",
+                "grupo": "N-1",
+                "padron": "N-1",
+                "es_cabeza": 1,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            },
+            {
+                "evento": "Coef vacio",
+                "grupo": "N-2",
+                "padron": "N-2",
+                "es_cabeza": 1,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            }
+        ],
+        "evento_personas": [],
+        "representacion_grupos_nominal": [],
+        "representacion_miembros_nominal": [],
+        "controles": [],
+        "registros_checkin": []
+    }
+}

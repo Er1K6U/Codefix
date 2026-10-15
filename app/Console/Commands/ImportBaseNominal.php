@@ -2,6 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Support\ActividadEvento;
+use App\Support\ReimportacionBloqueada;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -9,6 +11,7 @@ use Illuminate\Support\Facades\Storage;
 class ImportBaseNominal extends Command
 {
     protected $signature = 'base:import-nominal
+                            {evento_id? : Evento destino (obligatorio si hay más de un evento)}
                             {--wipe : Borra las personas anteriores del evento antes de importar}
                             {--file= : Ruta del archivo Excel (sobreescribe personas_excel_path del evento)}';
 
@@ -16,14 +19,9 @@ class ImportBaseNominal extends Command
 
     public function handle(): int
     {
-        // Selección de evento: is_active primero, luego el último
-        $evento = DB::table('eventos')->where('is_active', 1)->orderByDesc('id')->first();
-        if (!$evento) {
-            $evento = DB::table('eventos')->orderByDesc('id')->first();
-        }
+        $evento = $this->eventoDestino();
 
         if (!$evento) {
-            $this->error('No existe ningún evento en la base de datos.');
             return self::FAILURE;
         }
 
@@ -127,62 +125,102 @@ class ImportBaseNominal extends Command
 
         $gruposCreados = 0;
 
-        DB::transaction(function () use ($eventoId, $data, &$gruposCreados) {
-            if ($this->option('wipe')) {
-                // CASCADE borra grupos_nominal y miembros_nominal automáticamente
-                DB::table('evento_personas')->where('evento_id', $eventoId)->delete();
-            }
+        try {
+            DB::transaction(function () use ($eventoId, $data, &$gruposCreados) {
+                if ($this->option('wipe')) {
+                    // Antes del primer borrado: con poderes, asistencia o controles entregados no se reemplaza.
+                    ActividadEvento::exigirSinActividad($eventoId, 'la base de personas');
 
-            foreach (array_chunk($data, 500) as $chunk) {
-                DB::table('evento_personas')->insert($chunk);
-            }
-
-            // Personas que aún no tienen grupo base (idempotente sin --wipe)
-            $sinGrupo = DB::table('evento_personas as ep')
-                ->leftJoin('representacion_grupos_nominal as rgn', 'rgn.cabeza_persona_id', '=', 'ep.id')
-                ->where('ep.evento_id', $eventoId)
-                ->whereNull('rgn.id')
-                ->pluck('ep.id');
-
-            if ($sinGrupo->isNotEmpty()) {
-                $now = now();
-
-                $gruposData = $sinGrupo->map(fn($id) => [
-                    'evento_id'         => $eventoId,
-                    'cabeza_persona_id' => $id,
-                    'created_at'        => $now,
-                    'updated_at'        => $now,
-                ])->all();
-
-                foreach (array_chunk($gruposData, 500) as $chunk) {
-                    DB::table('representacion_grupos_nominal')->insert($chunk);
+                    // CASCADE borra grupos_nominal y miembros_nominal automáticamente
+                    DB::table('evento_personas')->where('evento_id', $eventoId)->delete();
                 }
 
-                $grupos = DB::table('representacion_grupos_nominal')
-                    ->where('evento_id', $eventoId)
-                    ->whereIn('cabeza_persona_id', $sinGrupo->all())
-                    ->pluck('id', 'cabeza_persona_id');
-
-                $miembrosData = $sinGrupo->map(fn($id) => [
-                    'grupo_id'   => $grupos[$id],
-                    'evento_id'  => $eventoId,
-                    'persona_id' => $id,
-                    'es_cabeza'  => true,
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ])->all();
-
-                foreach (array_chunk($miembrosData, 500) as $chunk) {
-                    DB::table('representacion_miembros_nominal')->insert($chunk);
+                foreach (array_chunk($data, 500) as $chunk) {
+                    DB::table('evento_personas')->insert($chunk);
                 }
 
-                $gruposCreados = $sinGrupo->count();
-            }
-        });
+                // Personas que aún no tienen grupo base (idempotente sin --wipe)
+                $sinGrupo = DB::table('evento_personas as ep')
+                    ->leftJoin('representacion_grupos_nominal as rgn', 'rgn.cabeza_persona_id', '=', 'ep.id')
+                    ->where('ep.evento_id', $eventoId)
+                    ->whereNull('rgn.id')
+                    ->pluck('ep.id');
+
+                if ($sinGrupo->isNotEmpty()) {
+                    $now = now();
+
+                    $gruposData = $sinGrupo->map(fn($id) => [
+                        'evento_id'         => $eventoId,
+                        'cabeza_persona_id' => $id,
+                        'created_at'        => $now,
+                        'updated_at'        => $now,
+                    ])->all();
+
+                    foreach (array_chunk($gruposData, 500) as $chunk) {
+                        DB::table('representacion_grupos_nominal')->insert($chunk);
+                    }
+
+                    $grupos = DB::table('representacion_grupos_nominal')
+                        ->where('evento_id', $eventoId)
+                        ->whereIn('cabeza_persona_id', $sinGrupo->all())
+                        ->pluck('id', 'cabeza_persona_id');
+
+                    $miembrosData = $sinGrupo->map(fn($id) => [
+                        'grupo_id'   => $grupos[$id],
+                        'evento_id'  => $eventoId,
+                        'persona_id' => $id,
+                        'es_cabeza'  => true,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ])->all();
+
+                    foreach (array_chunk($miembrosData, 500) as $chunk) {
+                        DB::table('representacion_miembros_nominal')->insert($chunk);
+                    }
+
+                    $gruposCreados = $sinGrupo->count();
+                }
+            });
+        } catch (ReimportacionBloqueada $e) {
+            $this->error($e->getMessage());
+            ActividadEvento::auditarBloqueo($e, 'base:import-nominal');
+            return self::FAILURE;
+        }
 
         $this->info("✅ Importación nominal OK. Personas: {$count} | Grupos base: {$gruposCreados}");
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Evento al que se importa: el indicado, o el único evento de la instalación.
+     * Nunca se elige por is_active ni por ser el más reciente, para no borrar otra asamblea.
+     */
+    private function eventoDestino(): ?object
+    {
+        $id = $this->argument('evento_id');
+
+        if ($id !== null) {
+            $evento = ctype_digit((string) $id) ? DB::table('eventos')->where('id', (int) $id)->first() : null;
+
+            if (!$evento) {
+                $this->error("No existe el evento #{$id}.");
+            }
+
+            return $evento;
+        }
+
+        $eventos = DB::table('eventos')->limit(2)->get();
+
+        if ($eventos->count() === 1) {
+            return $eventos->first();
+        }
+
+        $this->error($eventos->isEmpty()
+            ? 'No existe ningún evento en la base de datos.'
+            : 'Hay varios eventos. Indica el evento destino: php artisan base:import-nominal <evento_id>');
+
+        return null;
     }
 
     private function norm(string $s): string

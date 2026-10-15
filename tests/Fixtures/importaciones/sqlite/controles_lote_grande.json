@@ -1,0 +1,31 @@
+{
+    "pasos": [
+        {
+            "comando": "controls:import-excel",
+            "exit": 0,
+            "salida": "Evento seleccionado: #E1 - Controles\nArchivo controles: archivos\/a\/controles.xlsx\n✅ Controles importados: 1201 para evento E1 (wipe)."
+        }
+    ],
+    "foto": {
+        "conteos": {
+            "evento_padron": 0,
+            "representacion_grupos": 0,
+            "representacion_miembros": 0,
+            "evento_personas": 0,
+            "representacion_grupos_nominal": 0,
+            "representacion_miembros_nominal": 0,
+            "controles": 1201,
+            "registros_checkin": 0
+        },
+        "sha256": {
+            "evento_padron": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "representacion_grupos": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "representacion_miembros": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "evento_personas": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "representacion_grupos_nominal": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "representacion_miembros_nominal": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "controles": "25e1d57d2583d0d22997cbdefca9bafdfc7ecf0d544549e6305cacabfabcc106",
+            "registros_checkin": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        }
+    }
+}

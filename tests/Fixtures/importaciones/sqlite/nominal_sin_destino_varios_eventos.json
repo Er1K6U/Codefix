@@ -1,0 +1,101 @@
+{
+    "pasos": [
+        {
+            "comando": "base:import-nominal",
+            "exit": 1,
+            "salida": "Hay varios eventos. Indica el evento destino: php artisan base:import-nominal <evento_id>"
+        }
+    ],
+    "foto": {
+        "conteos": {
+            "evento_padron": 0,
+            "representacion_grupos": 0,
+            "representacion_miembros": 0,
+            "evento_personas": 3,
+            "representacion_grupos_nominal": 2,
+            "representacion_miembros_nominal": 3,
+            "controles": 0,
+            "registros_checkin": 0
+        },
+        "evento_padron": [],
+        "representacion_grupos": [],
+        "representacion_miembros": [],
+        "evento_personas": [
+            {
+                "evento": "Nominal anterior",
+                "cedula": "111",
+                "nombre": "Ana",
+                "telefono": null,
+                "correo": null,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Nominal anterior",
+                "cedula": "222",
+                "nombre": "Bruno",
+                "telefono": null,
+                "correo": null,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Nominal anterior",
+                "cedula": "333",
+                "nombre": "Carla",
+                "telefono": null,
+                "correo": null,
+                "created_at": null,
+                "updated_at": null
+            }
+        ],
+        "representacion_grupos_nominal": [
+            {
+                "evento": "Nominal anterior",
+                "cabeza": "111",
+                "control_numero": null,
+                "control_serial": null,
+                "checkin_at": null,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Nominal anterior",
+                "cabeza": "333",
+                "control_numero": null,
+                "control_serial": null,
+                "checkin_at": null,
+                "created_at": null,
+                "updated_at": null
+            }
+        ],
+        "representacion_miembros_nominal": [
+            {
+                "evento": "Nominal anterior",
+                "grupo": "111",
+                "persona": "111",
+                "es_cabeza": 1,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Nominal anterior",
+                "grupo": "111",
+                "persona": "222",
+                "es_cabeza": 0,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Nominal anterior",
+                "grupo": "333",
+                "persona": "333",
+                "es_cabeza": 1,
+                "created_at": null,
+                "updated_at": null
+            }
+        ],
+        "controles": [],
+        "registros_checkin": []
+    }
+}

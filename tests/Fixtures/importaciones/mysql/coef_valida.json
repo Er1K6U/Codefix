@@ -1,0 +1,148 @@
+{
+    "pasos": [
+        {
+            "comando": "base:import",
+            "exit": 0,
+            "salida": "Evento seleccionado: #E1 - Coef valida\nArchivo base: archivos\/a\/base.xlsx\nFila 6 incompleta (inmueble\/propietario\/coeficiente). Se omite.\nFila 8 incompleta (inmueble\/propietario\/coeficiente). Se omite.\n✅ Importación OK. Filas: 4 | Suma coef: 100.0000\n✅ Grupos base creados (1 por inmueble)."
+        }
+    ],
+    "foto": {
+        "conteos": {
+            "evento_padron": 4,
+            "representacion_grupos": 4,
+            "representacion_miembros": 4,
+            "evento_personas": 0,
+            "representacion_grupos_nominal": 0,
+            "representacion_miembros_nominal": 0,
+            "controles": 0,
+            "registros_checkin": 0
+        },
+        "evento_padron": [
+            {
+                "evento": "Coef valida",
+                "inmueble": "T1-101",
+                "propietario": "Ana Pérez",
+                "coeficiente": "20.5000",
+                "asistente": "Luis",
+                "celular": "3001112233",
+                "correo": null,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            },
+            {
+                "evento": "Coef valida",
+                "inmueble": "T1-102",
+                "propietario": "Bruno Díaz",
+                "coeficiente": "15.2500",
+                "asistente": null,
+                "celular": null,
+                "correo": null,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            },
+            {
+                "evento": "Coef valida",
+                "inmueble": "T1-103",
+                "propietario": "Carla Ruiz",
+                "coeficiente": "0.2500",
+                "asistente": "Marta",
+                "celular": null,
+                "correo": null,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            },
+            {
+                "evento": "Coef valida",
+                "inmueble": "T2-101",
+                "propietario": "Diego Gómez",
+                "coeficiente": "64.0000",
+                "asistente": null,
+                "celular": "3109998877",
+                "correo": null,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            }
+        ],
+        "representacion_grupos": [
+            {
+                "evento": "Coef valida",
+                "cabeza": "T1-101",
+                "control_numero": null,
+                "control_serial": null,
+                "checkin_at": null,
+                "checkin_by": null,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            },
+            {
+                "evento": "Coef valida",
+                "cabeza": "T1-102",
+                "control_numero": null,
+                "control_serial": null,
+                "checkin_at": null,
+                "checkin_by": null,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            },
+            {
+                "evento": "Coef valida",
+                "cabeza": "T1-103",
+                "control_numero": null,
+                "control_serial": null,
+                "checkin_at": null,
+                "checkin_by": null,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            },
+            {
+                "evento": "Coef valida",
+                "cabeza": "T2-101",
+                "control_numero": null,
+                "control_serial": null,
+                "checkin_at": null,
+                "checkin_by": null,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            }
+        ],
+        "representacion_miembros": [
+            {
+                "evento": "Coef valida",
+                "grupo": "T1-101",
+                "padron": "T1-101",
+                "es_cabeza": 1,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            },
+            {
+                "evento": "Coef valida",
+                "grupo": "T1-102",
+                "padron": "T1-102",
+                "es_cabeza": 1,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            },
+            {
+                "evento": "Coef valida",
+                "grupo": "T1-103",
+                "padron": "T1-103",
+                "es_cabeza": 1,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            },
+            {
+                "evento": "Coef valida",
+                "grupo": "T2-101",
+                "padron": "T2-101",
+                "es_cabeza": 1,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            }
+        ],
+        "evento_personas": [],
+        "representacion_grupos_nominal": [],
+        "representacion_miembros_nominal": [],
+        "controles": [],
+        "registros_checkin": []
+    }
+}

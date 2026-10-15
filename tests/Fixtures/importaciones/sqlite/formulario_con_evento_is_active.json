@@ -1,0 +1,196 @@
+{
+    "pasos": [
+        {
+            "flash": "Evento creado. ✅ Base importada. (ver log)"
+        }
+    ],
+    "auditoria": [
+        {
+            "modulo": "eventos",
+            "accion": "created",
+            "meta": {
+                "data": {
+                    "titulo": "Asamblea coeficiente",
+                    "slug": "asamblea-coeficiente",
+                    "descripcion": null,
+                    "fecha_inicio": "2026-10-20",
+                    "activo": true,
+                    "tipo_quorum": "coeficiente",
+                    "imagen": null,
+                    "base_excel_path": "eventos\/E2\/base_evento.xlsx",
+                    "controles_excel_path": null,
+                    "auto_import": [
+                        "✅ Base importada.",
+                        "Evento seleccionado: #E2 - Asamblea coeficiente\nArchivo base: eventos\/E2\/base_evento.xlsx\n✅ Importación OK. Filas: 2 | Suma coef: 100.0000\n✅ Grupos base creados (1 por inmueble)."
+                    ]
+                }
+            }
+        }
+    ],
+    "foto": {
+        "conteos": {
+            "evento_padron": 5,
+            "representacion_grupos": 4,
+            "representacion_miembros": 5,
+            "evento_personas": 0,
+            "representacion_grupos_nominal": 0,
+            "representacion_miembros_nominal": 0,
+            "controles": 0,
+            "registros_checkin": 1
+        },
+        "evento_padron": [
+            {
+                "evento": "Asamblea anterior",
+                "inmueble": "T1-101",
+                "propietario": "Prop T1-101",
+                "coeficiente": 50,
+                "asistente": null,
+                "celular": null,
+                "correo": null,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Asamblea anterior",
+                "inmueble": "T1-102",
+                "propietario": "Prop T1-102",
+                "coeficiente": 30,
+                "asistente": null,
+                "celular": null,
+                "correo": null,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Asamblea anterior",
+                "inmueble": "T1-103",
+                "propietario": "Prop T1-103",
+                "coeficiente": 20,
+                "asistente": null,
+                "celular": null,
+                "correo": null,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Asamblea coeficiente",
+                "inmueble": "N-1",
+                "propietario": "Nuevo Uno",
+                "coeficiente": 60,
+                "asistente": null,
+                "celular": null,
+                "correo": null,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            },
+            {
+                "evento": "Asamblea coeficiente",
+                "inmueble": "N-2",
+                "propietario": "Nuevo Dos",
+                "coeficiente": 40,
+                "asistente": null,
+                "celular": null,
+                "correo": null,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            }
+        ],
+        "representacion_grupos": [
+            {
+                "evento": "Asamblea anterior",
+                "cabeza": "T1-101",
+                "control_numero": "1",
+                "control_serial": "S-1",
+                "checkin_at": null,
+                "checkin_by": null,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Asamblea anterior",
+                "cabeza": "T1-103",
+                "control_numero": null,
+                "control_serial": null,
+                "checkin_at": null,
+                "checkin_by": null,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Asamblea coeficiente",
+                "cabeza": "N-1",
+                "control_numero": null,
+                "control_serial": null,
+                "checkin_at": null,
+                "checkin_by": null,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            },
+            {
+                "evento": "Asamblea coeficiente",
+                "cabeza": "N-2",
+                "control_numero": null,
+                "control_serial": null,
+                "checkin_at": null,
+                "checkin_by": null,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            }
+        ],
+        "representacion_miembros": [
+            {
+                "evento": "Asamblea anterior",
+                "grupo": "T1-101",
+                "padron": "T1-101",
+                "es_cabeza": 1,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Asamblea anterior",
+                "grupo": "T1-101",
+                "padron": "T1-102",
+                "es_cabeza": 0,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Asamblea anterior",
+                "grupo": "T1-103",
+                "padron": "T1-103",
+                "es_cabeza": 1,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Asamblea coeficiente",
+                "grupo": "N-1",
+                "padron": "N-1",
+                "es_cabeza": 1,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            },
+            {
+                "evento": "Asamblea coeficiente",
+                "grupo": "N-2",
+                "padron": "N-2",
+                "es_cabeza": 1,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            }
+        ],
+        "evento_personas": [],
+        "representacion_grupos_nominal": [],
+        "representacion_miembros_nominal": [],
+        "controles": [],
+        "registros_checkin": [
+            {
+                "evento": "Asamblea anterior",
+                "persona": null,
+                "inmueble_base": "T1-101",
+                "estado": "CHECKED_IN",
+                "control_numero_snapshot": 1
+            }
+        ]
+    }
+}

@@ -1,0 +1,146 @@
+{
+    "pasos": [
+        {
+            "comando": "base:import",
+            "exit": 0,
+            "salida": "Evento seleccionado: #E2 - Coef reciente\nArchivo base: archivos\/b\/base.xlsx\n✅ Importación OK. Filas: 1 | Suma coef: 100.0000\n✅ Grupos base creados (1 por inmueble)."
+        }
+    ],
+    "foto": {
+        "conteos": {
+            "evento_padron": 4,
+            "representacion_grupos": 3,
+            "representacion_miembros": 4,
+            "evento_personas": 0,
+            "representacion_grupos_nominal": 0,
+            "representacion_miembros_nominal": 0,
+            "controles": 0,
+            "registros_checkin": 1
+        },
+        "evento_padron": [
+            {
+                "evento": "Coef activo",
+                "inmueble": "T1-101",
+                "propietario": "Prop T1-101",
+                "coeficiente": "50.0000",
+                "asistente": null,
+                "celular": null,
+                "correo": null,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Coef activo",
+                "inmueble": "T1-102",
+                "propietario": "Prop T1-102",
+                "coeficiente": "30.0000",
+                "asistente": null,
+                "celular": null,
+                "correo": null,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Coef activo",
+                "inmueble": "T1-103",
+                "propietario": "Prop T1-103",
+                "coeficiente": "20.0000",
+                "asistente": null,
+                "celular": null,
+                "correo": null,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Coef reciente",
+                "inmueble": "R-1",
+                "propietario": "Reciente Uno",
+                "coeficiente": "100.0000",
+                "asistente": null,
+                "celular": null,
+                "correo": null,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            }
+        ],
+        "representacion_grupos": [
+            {
+                "evento": "Coef activo",
+                "cabeza": "T1-101",
+                "control_numero": "1",
+                "control_serial": "S-1",
+                "checkin_at": null,
+                "checkin_by": null,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Coef activo",
+                "cabeza": "T1-103",
+                "control_numero": null,
+                "control_serial": null,
+                "checkin_at": null,
+                "checkin_by": null,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Coef reciente",
+                "cabeza": "R-1",
+                "control_numero": null,
+                "control_serial": null,
+                "checkin_at": null,
+                "checkin_by": null,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            }
+        ],
+        "representacion_miembros": [
+            {
+                "evento": "Coef activo",
+                "grupo": "T1-101",
+                "padron": "T1-101",
+                "es_cabeza": 1,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Coef activo",
+                "grupo": "T1-101",
+                "padron": "T1-102",
+                "es_cabeza": 0,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Coef activo",
+                "grupo": "T1-103",
+                "padron": "T1-103",
+                "es_cabeza": 1,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Coef reciente",
+                "grupo": "R-1",
+                "padron": "R-1",
+                "es_cabeza": 1,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            }
+        ],
+        "evento_personas": [],
+        "representacion_grupos_nominal": [],
+        "representacion_miembros_nominal": [],
+        "controles": [],
+        "registros_checkin": [
+            {
+                "evento": "Coef activo",
+                "persona": null,
+                "inmueble_base": "T1-101",
+                "estado": "CHECKED_IN",
+                "control_numero_snapshot": 1
+            }
+        ]
+    }
+}

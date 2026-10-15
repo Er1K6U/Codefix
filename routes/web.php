@@ -67,13 +67,14 @@ Route::middleware(['auth', 'verified', 'usuario.activo', 'evento.contexto'])->gr
     Route::get('/eventos/{id}/editar', EventForm::class)->name('eventos.editar');
 
     // Check-in (SÍ requiere evento activo)
+    // Solo ADMIN y OPERADOR (checkin.usar); las acciones internas lo vuelven a comprobar en boot().
     Route::get('/checkin', RegistroPantalla::class)
-        ->middleware(['evento.activo'])
+        ->middleware(['evento.activo', 'can:checkin.usar'])
         ->name('checkin');
 
     // Retiro controles
     Route::get('/controles/retiro', RetiroReingreso::class)
-        ->middleware(['evento.activo'])
+        ->middleware(['evento.activo', 'can:checkin.usar'])
         ->name('controles.retiro');
 
     // Quorum (max)

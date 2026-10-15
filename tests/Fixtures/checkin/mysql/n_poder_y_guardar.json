@@ -1,0 +1,385 @@
+{
+    "pasos": {
+        "buscar": [
+            {
+                "label": "Ana (111)"
+            },
+            {
+                "label": "Diana (444)"
+            }
+        ],
+        "seleccionar 111": {
+            "inmueble": "Ana (111)",
+            "propietario": "Ana",
+            "coefInmueble": null,
+            "estado": "EN_PROCESO",
+            "cabeza": true,
+            "coefTotal": 1.0,
+            "poderes": 0,
+            "miembros": [
+                [
+                    "111",
+                    "Ana",
+                    true,
+                    1.0
+                ]
+            ],
+            "asistente": [
+                "Ana",
+                null,
+                null
+            ],
+            "control": [
+                null,
+                null,
+                null,
+                null,
+                null
+            ],
+            "mensajes": [],
+            "seleccionado": true
+        },
+        "anexar 222": {
+            "inmueble": "Ana (111)",
+            "propietario": "Ana",
+            "coefInmueble": null,
+            "estado": "EN_PROCESO",
+            "cabeza": true,
+            "coefTotal": 2.0,
+            "poderes": 1,
+            "miembros": [
+                [
+                    "111",
+                    "Ana",
+                    true,
+                    1.0
+                ],
+                [
+                    "222",
+                    "Bruno",
+                    false,
+                    1.0
+                ]
+            ],
+            "asistente": [
+                "Ana",
+                null,
+                null
+            ],
+            "control": [
+                null,
+                null,
+                null,
+                null,
+                null
+            ],
+            "mensajes": {
+                "poder": "✅ Poder nominal anexado correctamente."
+            },
+            "seleccionado": true
+        },
+        "guardar": {
+            "inmueble": null,
+            "propietario": null,
+            "coefInmueble": null,
+            "estado": null,
+            "cabeza": false,
+            "coefTotal": null,
+            "poderes": null,
+            "miembros": [],
+            "asistente": [
+                null,
+                null,
+                null
+            ],
+            "control": [
+                null,
+                null,
+                null,
+                null,
+                null
+            ],
+            "mensajes": {
+                "checkin": "✅ Check-in cerrado correctamente."
+            },
+            "seleccionado": false
+        },
+        "abrir 222 (representada)": {
+            "inmueble": "Ana (111)",
+            "propietario": "Ana",
+            "coefInmueble": null,
+            "estado": "CHECKED_IN",
+            "cabeza": true,
+            "coefTotal": 2.0,
+            "poderes": 1,
+            "miembros": [
+                [
+                    "111",
+                    "Ana",
+                    true,
+                    1.0
+                ],
+                [
+                    "222",
+                    "Bruno",
+                    false,
+                    1.0
+                ]
+            ],
+            "asistente": [
+                "Ana",
+                "3001112233",
+                null
+            ],
+            "control": [
+                1,
+                "n-C1",
+                null,
+                null,
+                null
+            ],
+            "mensajes": {
+                "checkin": "ℹ️ La persona Bruno (222) está representada por Ana (111). Se abrirá la cabeza automáticamente."
+            },
+            "seleccionado": true
+        }
+    },
+    "foto": {
+        "grupos": [
+            [
+                "Asamblea coeficiente",
+                "101",
+                null,
+                null
+            ],
+            [
+                "Asamblea coeficiente",
+                "102",
+                null,
+                null
+            ],
+            [
+                "Asamblea coeficiente",
+                "103",
+                null,
+                null
+            ],
+            [
+                "Asamblea coeficiente",
+                "104",
+                null,
+                null
+            ],
+            [
+                "Asamblea coeficiente",
+                "105",
+                null,
+                null
+            ]
+        ],
+        "miembros": [
+            [
+                "Asamblea coeficiente",
+                "101",
+                "101",
+                1
+            ],
+            [
+                "Asamblea coeficiente",
+                "102",
+                "102",
+                1
+            ],
+            [
+                "Asamblea coeficiente",
+                "103",
+                "103",
+                1
+            ],
+            [
+                "Asamblea coeficiente",
+                "104",
+                "104",
+                1
+            ],
+            [
+                "Asamblea coeficiente",
+                "105",
+                "105",
+                1
+            ]
+        ],
+        "grupos_nominal": [
+            [
+                "Asamblea nominal",
+                "111",
+                null,
+                null
+            ],
+            [
+                "Asamblea nominal",
+                "222",
+                null,
+                null
+            ],
+            [
+                "Asamblea nominal",
+                "333",
+                null,
+                null
+            ],
+            [
+                "Asamblea nominal",
+                "444",
+                null,
+                null
+            ]
+        ],
+        "miembros_nominal": [
+            [
+                "Asamblea nominal",
+                "111",
+                "111",
+                1
+            ],
+            [
+                "Asamblea nominal",
+                "111",
+                "222",
+                0
+            ],
+            [
+                "Asamblea nominal",
+                "333",
+                "333",
+                1
+            ],
+            [
+                "Asamblea nominal",
+                "444",
+                "444",
+                1
+            ]
+        ],
+        "controles": [
+            [
+                "Asamblea coeficiente",
+                1,
+                "c-C1",
+                "LIBRE",
+                null
+            ],
+            [
+                "Asamblea coeficiente",
+                2,
+                "c-C2",
+                "LIBRE",
+                null
+            ],
+            [
+                "Asamblea coeficiente",
+                3,
+                "c-C3",
+                "LIBRE",
+                null
+            ],
+            [
+                "Asamblea coeficiente",
+                4,
+                "c-C4",
+                "LIBRE",
+                null
+            ],
+            [
+                "Asamblea coeficiente",
+                5,
+                "c-C5",
+                "LIBRE",
+                null
+            ],
+            [
+                "Asamblea nominal",
+                1,
+                "n-C1",
+                "ASIGNADO",
+                "P111"
+            ],
+            [
+                "Asamblea nominal",
+                2,
+                "n-C2",
+                "LIBRE",
+                null
+            ],
+            [
+                "Asamblea nominal",
+                3,
+                "n-C3",
+                "LIBRE",
+                null
+            ],
+            [
+                "Asamblea nominal",
+                4,
+                "n-C4",
+                "LIBRE",
+                null
+            ],
+            [
+                "Asamblea nominal",
+                5,
+                "n-C5",
+                "LIBRE",
+                null
+            ]
+        ],
+        "registros": [
+            {
+                "evento": "Asamblea nominal",
+                "quien": "P111",
+                "grupo": null,
+                "estado": "CHECKED_IN",
+                "asistente": [
+                    "Ana",
+                    "3001112233",
+                    null
+                ],
+                "control": 1,
+                "control_numero_snapshot": 1,
+                "control_serial_snapshot": null,
+                "coef_total_snapshot": 2.0,
+                "cabeza_snapshot": "Ana (111)",
+                "checked_in": [
+                    "2026-10-15 10:00:00",
+                    "operador@ejemplo.test"
+                ],
+                "retirado": [
+                    null,
+                    null
+                ],
+                "reingreso": [
+                    null,
+                    null
+                ]
+            }
+        ]
+    },
+    "quorum": {
+        "coeficiente": {
+            "actual": 0.0,
+            "retirado": 0.0,
+            "personas": 0,
+            "personasRetiradas": 0,
+            "controlesActivos": 0,
+            "controlesRetirados": 0
+        },
+        "nominal": {
+            "actual": 50.0,
+            "retirado": 0.0,
+            "personas": 2,
+            "personasRetiradas": 0,
+            "controlesActivos": 1,
+            "controlesRetirados": 0
+        }
+    }
+}

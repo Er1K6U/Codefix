@@ -2,6 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Support\ActividadEvento;
+use App\Support\ReimportacionBloqueada;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
@@ -36,39 +38,48 @@ class ControlsImport extends Command
             return self::FAILURE;
         }
 
-        DB::transaction(function () use ($eventoId, $count, $wipe) {
-            if ($wipe) {
-                DB::table('controles')->where('evento_id', $eventoId)->delete();
-                $this->info("🧹 Controles del evento {$eventoId} eliminados.");
-            }
+        try {
+            DB::transaction(function () use ($eventoId, $count, $wipe) {
+                if ($wipe) {
+                    // Antes del primer borrado: con poderes, asistencia o controles entregados no se reemplaza.
+                    ActividadEvento::exigirSinActividad($eventoId, 'la lista de controles');
 
-            $now = now();
-            $batch = [];
-
-            for ($n = 1; $n <= $count; $n++) {
-                $batch[] = [
-                    'evento_id' => $eventoId,
-                    'numero' => $n,
-                    'serial' => str_pad((string) $n, 6, '0', STR_PAD_LEFT), // 000001
-                    'estado' => 'LIBRE',
-                    'asignado_a_registro_id' => null,
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ];
-
-                // Inserta en chunks de 1000
-                if (count($batch) === 1000) {
-                    DB::table('controles')->insert($batch);
-                    $batch = [];
+                    DB::table('controles')->where('evento_id', $eventoId)->delete();
+                    $this->info("🧹 Controles del evento {$eventoId} eliminados.");
                 }
-            }
 
-            if (!empty($batch)) {
-                DB::table('controles')->insert($batch);
-            }
+                $now = now();
+                $batch = [];
 
-            $this->info("✅ Controles generados: {$count} para evento {$eventoId}.");
-        });
+                for ($n = 1; $n <= $count; $n++) {
+                    $batch[] = [
+                        'evento_id' => $eventoId,
+                        'numero' => $n,
+                        'serial' => str_pad((string) $n, 6, '0', STR_PAD_LEFT), // 000001
+                        'estado' => 'LIBRE',
+                        'asignado_a_registro_id' => null,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ];
+
+                    // Inserta en chunks de 1000
+                    if (count($batch) === 1000) {
+                        DB::table('controles')->insert($batch);
+                        $batch = [];
+                    }
+                }
+
+                if (!empty($batch)) {
+                    DB::table('controles')->insert($batch);
+                }
+
+                $this->info("✅ Controles generados: {$count} para evento {$eventoId}.");
+            });
+        } catch (ReimportacionBloqueada $e) {
+            $this->error($e->getMessage());
+            ActividadEvento::auditarBloqueo($e, 'controls:import');
+            return self::FAILURE;
+        }
 
         return self::SUCCESS;
     }
