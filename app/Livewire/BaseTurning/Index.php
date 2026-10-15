@@ -4,6 +4,7 @@ namespace App\Livewire\BaseTurning;
 
 use Livewire\Component;
 use Illuminate\Support\Facades\DB;
+use App\Support\ControlesPorRegistro;
 use App\Support\EventContext;
 
 class Index extends Component
@@ -59,13 +60,7 @@ class Index extends Component
             $items = DB::table('registros_checkin as rc')
                 ->joinSub($lastPerPersona, 'u', fn($j) => $j->on('rc.id', '=', 'u.last_id'))
                 ->join('evento_personas as ep', 'ep.id', '=', 'rc.persona_id')
-                ->leftJoin('controles as c', function ($join) {
-                    $join->on('c.evento_id', '=', 'rc.evento_id')
-                        ->where(function ($q) {
-                            $q->whereColumn('c.id', 'rc.control_id')
-                                ->orWhereColumn('c.numero', 'rc.control_numero_snapshot');
-                        });
-                })
+                ->leftJoinSub(ControlesPorRegistro::delEvento($eid), 'c', 'c.registro_id', '=', 'rc.id')
                 ->where('rc.evento_id', $eid)
                 ->whereIn('rc.estado', ['CHECKED_IN', 'RETIRADO'])
                 ->orderBy('ep.nombre')
@@ -124,13 +119,7 @@ class Index extends Component
                 $join->on('rc.id', '=', 'u.last_id');
             })
             ->leftJoin('evento_padron as ep', 'ep.id', '=', 'rc.inmueble_base_id')
-            ->leftJoin('controles as c', function ($join) {
-                $join->on('c.evento_id', '=', 'rc.evento_id')
-                    ->where(function ($q) {
-                        $q->whereColumn('c.id', 'rc.control_id')
-                            ->orWhereColumn('c.numero', 'rc.control_numero_snapshot');
-                    });
-            })
+            ->leftJoinSub(ControlesPorRegistro::delEvento($eid), 'c', 'c.registro_id', '=', 'rc.id')
             ->where('rc.evento_id', $eid)
             ->whereIn('rc.estado', ['CHECKED_IN', 'RETIRADO'])
             ->orderBy('rc.control_numero_snapshot')

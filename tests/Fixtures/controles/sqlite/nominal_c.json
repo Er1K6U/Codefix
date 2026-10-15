@@ -1,0 +1,494 @@
+{
+    "base_turning": {
+        "tipo": "nominal",
+        "total": 7.0,
+        "rows": [
+            {
+                "control_numero": 1,
+                "codigo": "C-0001",
+                "inmueble": "1001",
+                "propietario": "Ana Ficticia",
+                "coef": "2",
+                "estado": "CHECKED_IN"
+            },
+            {
+                "control_numero": 2,
+                "codigo": "C-0002",
+                "inmueble": "1003",
+                "propietario": "Carla Ficticia",
+                "coef": "1",
+                "estado": "CHECKED_IN"
+            },
+            {
+                "control_numero": 3,
+                "codigo": "C-0003",
+                "inmueble": "1004",
+                "propietario": "Diego Ficticio",
+                "coef": "1",
+                "estado": "RETIRADO"
+            },
+            {
+                "control_numero": 5,
+                "codigo": "C-0004",
+                "inmueble": "1005",
+                "propietario": "Elena Ficticia",
+                "coef": "1",
+                "estado": "CHECKED_IN"
+            },
+            {
+                "control_numero": 5,
+                "codigo": "C-0005",
+                "inmueble": "1005",
+                "propietario": "Elena Ficticia",
+                "coef": "1",
+                "estado": "CHECKED_IN"
+            },
+            {
+                "control_numero": 77,
+                "codigo": "",
+                "inmueble": "1006",
+                "propietario": "Fabio Ficticio",
+                "coef": "1",
+                "estado": "CHECKED_IN"
+            }
+        ],
+        "copyText": [
+            [
+                "C-0001",
+                "1",
+                "1001",
+                "Ana Ficticia",
+                "2"
+            ],
+            [
+                "C-0002",
+                "2",
+                "1003",
+                "Carla Ficticia",
+                "1"
+            ],
+            [
+                "C-0003",
+                "3",
+                "1004",
+                "Diego Ficticio",
+                "1"
+            ],
+            [
+                "C-0004",
+                "5",
+                "1005",
+                "Elena Ficticia",
+                "1"
+            ],
+            [
+                "C-0005",
+                "5",
+                "1005",
+                "Elena Ficticia",
+                "1"
+            ],
+            [
+                "",
+                "77",
+                "1006",
+                "Fabio Ficticio",
+                "1"
+            ]
+        ]
+    },
+    "informe": {
+        "Resumen": [
+            [
+                "COEFIX - INFORME DE ASAMBLEA"
+            ],
+            [
+                "Evento:",
+                "Escenario C nominal"
+            ],
+            [
+                "Generado:",
+                "2026-10-15 10:00"
+            ],
+            [
+                ""
+            ],
+            [
+                "RESUMEN GENERAL (MODO NOMINAL)"
+            ],
+            [
+                "Controles activos:",
+                3
+            ],
+            [
+                "Votos presentes (CHECKED_IN):",
+                5
+            ],
+            [
+                "Votos retirados (RETIRADO):",
+                1
+            ],
+            [
+                "Personas no asistieron:",
+                2
+            ],
+            [
+                "Total personas en padrón nominal:",
+                7
+            ]
+        ],
+        "Asistencia": [
+            [
+                "ASISTENCIA (BASE TURNING)"
+            ],
+            [
+                ""
+            ],
+            [
+                "# Control",
+                "Código",
+                "Cédula",
+                "Nombre",
+                "",
+                "Teléfono",
+                "Correo",
+                "Votos",
+                "Estado",
+                "Hora check-in",
+                "Hora retiro",
+                "Hora reingreso"
+            ],
+            [
+                1,
+                "C-0001",
+                "1001",
+                "Ana Ficticia",
+                "",
+                "3000000000",
+                "",
+                2,
+                "CHECKED_IN",
+                "2026-10-15 08:30:00 AM",
+                "",
+                ""
+            ],
+            [
+                2,
+                "C-0002",
+                "1003",
+                "Carla Ficticia",
+                "",
+                "3000000000",
+                "",
+                1,
+                "CHECKED_IN",
+                "2026-10-15 08:30:00 AM",
+                "",
+                ""
+            ],
+            [
+                3,
+                "C-0003",
+                "1004",
+                "Diego Ficticio",
+                "",
+                "3000000000",
+                "",
+                1,
+                "RETIRADO",
+                "2026-10-15 08:30:00 AM",
+                "2026-10-15 09:20:00 AM",
+                ""
+            ],
+            [
+                5,
+                "C-0004",
+                "1005",
+                "Elena Ficticia",
+                "",
+                "3000000000",
+                "",
+                1,
+                "CHECKED_IN",
+                "2026-10-15 08:30:00 AM",
+                "",
+                ""
+            ],
+            [
+                5,
+                "C-0005",
+                "1005",
+                "Elena Ficticia",
+                "",
+                "3000000000",
+                "",
+                1,
+                "CHECKED_IN",
+                "2026-10-15 08:30:00 AM",
+                "",
+                ""
+            ],
+            [
+                77,
+                "",
+                "1006",
+                "Fabio Ficticio",
+                "",
+                "3000000000",
+                "",
+                1,
+                "CHECKED_IN",
+                "2026-10-15 08:30:00 AM",
+                "",
+                ""
+            ]
+        ],
+        "Quórum": [
+            [
+                "QUÓRUM (SNAPSHOT ACTUAL - MODO NOMINAL)"
+            ],
+            [
+                ""
+            ],
+            [
+                "Votos presentes (CHECKED_IN):",
+                5
+            ],
+            [
+                "Votos retirados (RETIRADO):",
+                1
+            ],
+            [
+                "Votos totales (presente + retirado):",
+                6
+            ],
+            [
+                ""
+            ],
+            [
+                "PRESENTES"
+            ],
+            [
+                "Cédula",
+                "Nombre",
+                "Votos"
+            ],
+            [
+                "1001",
+                "Ana Ficticia",
+                2
+            ],
+            [
+                "1003",
+                "Carla Ficticia",
+                1
+            ],
+            [
+                "1005",
+                "Elena Ficticia",
+                1
+            ],
+            [
+                "1006",
+                "Fabio Ficticio",
+                1
+            ],
+            [
+                ""
+            ],
+            [
+                "RETIRADOS"
+            ],
+            [
+                "Cédula",
+                "Nombre",
+                "Votos"
+            ],
+            [
+                "1004",
+                "Diego Ficticio",
+                1
+            ]
+        ],
+        "Ausentes": [
+            [
+                "AUSENTES (NO REGISTRADOS - MODO NOMINAL)"
+            ],
+            [
+                ""
+            ],
+            [
+                "Cédula",
+                "Nombre",
+                "Teléfono",
+                "Correo",
+                "",
+                ""
+            ],
+            [
+                "1007",
+                "Gina Ficticia",
+                "",
+                "",
+                "",
+                ""
+            ],
+            [
+                ""
+            ]
+        ],
+        "Poderes": [
+            [
+                "PODERES \/ REPRESENTACIONES"
+            ],
+            [
+                ""
+            ],
+            [
+                "Nombre cabeza",
+                "Cédula cabeza",
+                "# Poderes",
+                "Votos propios (1)",
+                "Votos poderes",
+                "Votos total",
+                "Estado",
+                "# Control",
+                "Código Control"
+            ],
+            [
+                "Ana Ficticia",
+                "1001",
+                1,
+                1,
+                1,
+                2,
+                "CHECKED_IN",
+                1,
+                "C-0001"
+            ],
+            [
+                "Carla Ficticia",
+                "1003",
+                0,
+                1,
+                0,
+                1,
+                "CHECKED_IN",
+                2,
+                ""
+            ],
+            [
+                "Diego Ficticio",
+                "1004",
+                0,
+                1,
+                0,
+                1,
+                "RETIRADO",
+                3,
+                ""
+            ],
+            [
+                "Elena Ficticia",
+                "1005",
+                0,
+                1,
+                0,
+                1,
+                "CHECKED_IN",
+                5,
+                ""
+            ],
+            [
+                "Fabio Ficticio",
+                "1006",
+                0,
+                1,
+                0,
+                1,
+                "CHECKED_IN",
+                77,
+                ""
+            ],
+            [
+                "Gina Ficticia",
+                "1007",
+                0,
+                1,
+                0,
+                1,
+                "",
+                "",
+                ""
+            ],
+            [
+                ""
+            ],
+            [
+                "TOTAL",
+                "",
+                "",
+                6,
+                1,
+                7,
+                "",
+                "",
+                ""
+            ]
+        ],
+        "Poderes Detalle": [
+            [
+                "PODERES · DETALLE POR CABEZA (MODO NOMINAL)"
+            ],
+            [
+                ""
+            ],
+            [
+                "Cabeza (nombre)",
+                "Cédula cabeza",
+                "# Poderes",
+                "Apoderado (nombre)",
+                "Apoderado (cédula)",
+                ""
+            ],
+            [
+                "CABEZA",
+                "Ana Ficticia",
+                1,
+                "1001",
+                "",
+                ""
+            ],
+            [
+                "",
+                "",
+                "",
+                "",
+                "",
+                ""
+            ],
+            [
+                "Ana Ficticia",
+                "1001",
+                "",
+                "Bruno Ficticio",
+                "1002",
+                ""
+            ],
+            [
+                "",
+                "",
+                "",
+                "",
+                "Subtotal apoderados:",
+                1
+            ],
+            [
+                ""
+            ],
+            [
+                ""
+            ]
+        ]
+    }
+}
