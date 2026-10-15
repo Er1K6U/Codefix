@@ -1,0 +1,61 @@
+{
+    "pasos": [
+        {
+            "comando": "base:import",
+            "exit": 0,
+            "salida": "Evento seleccionado: #E1 - Coef activo\nArchivo base: archivos\/a\/base.xlsx\n✅ Importación OK. Filas: 1 | Suma coef: 100.0000\n✅ Grupos base creados (1 por inmueble)."
+        }
+    ],
+    "foto": {
+        "conteos": {
+            "evento_padron": 1,
+            "representacion_grupos": 1,
+            "representacion_miembros": 1,
+            "evento_personas": 0,
+            "representacion_grupos_nominal": 0,
+            "representacion_miembros_nominal": 0,
+            "controles": 0,
+            "registros_checkin": 0
+        },
+        "evento_padron": [
+            {
+                "evento": "Coef activo",
+                "inmueble": "A-1",
+                "propietario": "Activo Uno",
+                "coeficiente": 100,
+                "asistente": null,
+                "celular": null,
+                "correo": null,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            }
+        ],
+        "representacion_grupos": [
+            {
+                "evento": "Coef activo",
+                "cabeza": "A-1",
+                "control_numero": null,
+                "control_serial": null,
+                "checkin_at": null,
+                "checkin_by": null,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            }
+        ],
+        "representacion_miembros": [
+            {
+                "evento": "Coef activo",
+                "grupo": "A-1",
+                "padron": "A-1",
+                "es_cabeza": 1,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            }
+        ],
+        "evento_personas": [],
+        "representacion_grupos_nominal": [],
+        "representacion_miembros_nominal": [],
+        "controles": [],
+        "registros_checkin": []
+    }
+}

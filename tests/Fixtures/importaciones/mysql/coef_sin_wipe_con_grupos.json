@@ -1,0 +1,72 @@
+{
+    "pasos": [
+        {
+            "comando": "base:import",
+            "excepcion": "UniqueConstraintViolationException",
+            "codigo": "23000"
+        }
+    ],
+    "foto": {
+        "conteos": {
+            "evento_padron": 2,
+            "representacion_grupos": 1,
+            "representacion_miembros": 1,
+            "evento_personas": 0,
+            "representacion_grupos_nominal": 0,
+            "representacion_miembros_nominal": 0,
+            "controles": 0,
+            "registros_checkin": 0
+        },
+        "evento_padron": [
+            {
+                "evento": "Coef sin wipe",
+                "inmueble": "V-1",
+                "propietario": "Viejo Uno",
+                "coeficiente": "50.0000",
+                "asistente": null,
+                "celular": null,
+                "correo": null,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Coef sin wipe",
+                "inmueble": "V-2",
+                "propietario": "Viejo Dos",
+                "coeficiente": "50.0000",
+                "asistente": null,
+                "celular": null,
+                "correo": null,
+                "created_at": null,
+                "updated_at": null
+            }
+        ],
+        "representacion_grupos": [
+            {
+                "evento": "Coef sin wipe",
+                "cabeza": "V-1",
+                "control_numero": null,
+                "control_serial": null,
+                "checkin_at": null,
+                "checkin_by": null,
+                "created_at": null,
+                "updated_at": null
+            }
+        ],
+        "representacion_miembros": [
+            {
+                "evento": "Coef sin wipe",
+                "grupo": "V-1",
+                "padron": "V-1",
+                "es_cabeza": 1,
+                "created_at": null,
+                "updated_at": null
+            }
+        ],
+        "evento_personas": [],
+        "representacion_grupos_nominal": [],
+        "representacion_miembros_nominal": [],
+        "controles": [],
+        "registros_checkin": []
+    }
+}

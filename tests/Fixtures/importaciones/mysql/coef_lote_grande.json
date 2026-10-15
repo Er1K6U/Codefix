@@ -1,0 +1,31 @@
+{
+    "pasos": [
+        {
+            "comando": "base:import",
+            "exit": 0,
+            "salida": "Evento seleccionado: #E1 - Coef grande\nArchivo base: archivos\/a\/base.xlsx\n✅ Importación OK. Filas: 1201 | Suma coef: 100.0000\n✅ Grupos base creados (1 por inmueble)."
+        }
+    ],
+    "foto": {
+        "conteos": {
+            "evento_padron": 1201,
+            "representacion_grupos": 1201,
+            "representacion_miembros": 1201,
+            "evento_personas": 0,
+            "representacion_grupos_nominal": 0,
+            "representacion_miembros_nominal": 0,
+            "controles": 0,
+            "registros_checkin": 0
+        },
+        "sha256": {
+            "evento_padron": "badc7ac81a545e112702caff00a9b5dd9ec7c78023d67f8e64d097dd1719dc93",
+            "representacion_grupos": "3bcfa704e24beb94323f50e71b18be7b3b02b1ceb226c839dcdb37fedb3fea17",
+            "representacion_miembros": "72a4e2802fd9d92f0e0493e680129f81e924a7b13d2a75485b6f5d238e92f22d",
+            "evento_personas": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "representacion_grupos_nominal": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "representacion_miembros_nominal": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "controles": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "registros_checkin": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        }
+    }
+}

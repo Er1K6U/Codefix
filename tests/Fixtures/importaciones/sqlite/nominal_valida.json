@@ -1,0 +1,136 @@
+{
+    "pasos": [
+        {
+            "comando": "base:import-nominal",
+            "exit": 0,
+            "salida": "Evento seleccionado: #E1 - Nominal valida\nArchivo nominal: archivos\/a\/personas.xlsx\nFila 5 incompleta (cédula\/nombre). Se omite.\n✅ Importación nominal OK. Personas: 4 | Grupos base: 4"
+        }
+    ],
+    "foto": {
+        "conteos": {
+            "evento_padron": 0,
+            "representacion_grupos": 0,
+            "representacion_miembros": 0,
+            "evento_personas": 4,
+            "representacion_grupos_nominal": 4,
+            "representacion_miembros_nominal": 4,
+            "controles": 0,
+            "registros_checkin": 0
+        },
+        "evento_padron": [],
+        "representacion_grupos": [],
+        "representacion_miembros": [],
+        "evento_personas": [
+            {
+                "evento": "Nominal valida",
+                "cedula": "1234567",
+                "nombre": "Ana Pérez",
+                "telefono": "3001112233",
+                "correo": "ana@ejemplo.test",
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            },
+            {
+                "evento": "Nominal valida",
+                "cedula": "89012345",
+                "nombre": "Bruno Díaz",
+                "telefono": null,
+                "correo": null,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            },
+            {
+                "evento": "Nominal valida",
+                "cedula": "CE-7781",
+                "nombre": "Carla Ruiz",
+                "telefono": null,
+                "correo": "carla@ejemplo.test",
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            },
+            {
+                "evento": "Nominal valida",
+                "cedula": "123456",
+                "nombre": "Diego Gómez",
+                "telefono": "3109998877",
+                "correo": null,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            }
+        ],
+        "representacion_grupos_nominal": [
+            {
+                "evento": "Nominal valida",
+                "cabeza": "1234567",
+                "control_numero": null,
+                "control_serial": null,
+                "checkin_at": null,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            },
+            {
+                "evento": "Nominal valida",
+                "cabeza": "89012345",
+                "control_numero": null,
+                "control_serial": null,
+                "checkin_at": null,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            },
+            {
+                "evento": "Nominal valida",
+                "cabeza": "CE-7781",
+                "control_numero": null,
+                "control_serial": null,
+                "checkin_at": null,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            },
+            {
+                "evento": "Nominal valida",
+                "cabeza": "123456",
+                "control_numero": null,
+                "control_serial": null,
+                "checkin_at": null,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            }
+        ],
+        "representacion_miembros_nominal": [
+            {
+                "evento": "Nominal valida",
+                "grupo": "1234567",
+                "persona": "1234567",
+                "es_cabeza": 1,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            },
+            {
+                "evento": "Nominal valida",
+                "grupo": "89012345",
+                "persona": "89012345",
+                "es_cabeza": 1,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            },
+            {
+                "evento": "Nominal valida",
+                "grupo": "CE-7781",
+                "persona": "CE-7781",
+                "es_cabeza": 1,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            },
+            {
+                "evento": "Nominal valida",
+                "grupo": "123456",
+                "persona": "123456",
+                "es_cabeza": 1,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            }
+        ],
+        "controles": [],
+        "registros_checkin": []
+    }
+}

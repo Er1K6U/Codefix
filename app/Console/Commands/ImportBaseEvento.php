@@ -169,26 +169,40 @@ class ImportBaseEvento extends Command
                 ->where('evento_id', $eventoId)
                 ->get();
 
-            foreach ($padron as $p) {
-                $grupoId = DB::table('representacion_grupos')->insertGetId([
-                    'evento_id' => $eventoId,
-                    'cabeza_padron_id' => $p->id,
-                    'control_numero' => null,
-                    'control_serial' => null,
-                    'checkin_at' => null,
-                    'checkin_by' => null,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
+            // Por lotes: primero los grupos y luego sus cabezas. El id de cada grupo se busca por su
+            // cabeza (única por evento), sin suponer ids consecutivos.
+            $now = now();
 
-                DB::table('representacion_miembros')->insert([
-                    'grupo_id' => $grupoId,
-                    'evento_id' => $eventoId,
-                    'padron_id' => $p->id,
-                    'es_cabeza' => true,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
+            $gruposData = $padron->map(fn($p) => [
+                'evento_id' => $eventoId,
+                'cabeza_padron_id' => $p->id,
+                'control_numero' => null,
+                'control_serial' => null,
+                'checkin_at' => null,
+                'checkin_by' => null,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ])->all();
+
+            foreach (array_chunk($gruposData, 500) as $chunk) {
+                DB::table('representacion_grupos')->insert($chunk);
+            }
+
+            $grupos = DB::table('representacion_grupos')
+                ->where('evento_id', $eventoId)
+                ->pluck('id', 'cabeza_padron_id');
+
+            $miembrosData = $padron->map(fn($p) => [
+                'grupo_id' => $grupos[$p->id],
+                'evento_id' => $eventoId,
+                'padron_id' => $p->id,
+                'es_cabeza' => true,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ])->all();
+
+            foreach (array_chunk($miembrosData, 500) as $chunk) {
+                DB::table('representacion_miembros')->insert($chunk);
             }
         });
 

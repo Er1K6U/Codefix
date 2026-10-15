@@ -1,0 +1,29 @@
+{
+    "pasos": [
+        {
+            "comando": "base:import",
+            "exit": 1,
+            "salida": "Evento seleccionado: #E1 - Coef duplicado\nArchivo base: archivos\/a\/base.xlsx\nDuplicado de inmueble en Excel: t1-101 (fila 3)"
+        }
+    ],
+    "foto": {
+        "conteos": {
+            "evento_padron": 0,
+            "representacion_grupos": 0,
+            "representacion_miembros": 0,
+            "evento_personas": 0,
+            "representacion_grupos_nominal": 0,
+            "representacion_miembros_nominal": 0,
+            "controles": 0,
+            "registros_checkin": 0
+        },
+        "evento_padron": [],
+        "representacion_grupos": [],
+        "representacion_miembros": [],
+        "evento_personas": [],
+        "representacion_grupos_nominal": [],
+        "representacion_miembros_nominal": [],
+        "controles": [],
+        "registros_checkin": []
+    }
+}
