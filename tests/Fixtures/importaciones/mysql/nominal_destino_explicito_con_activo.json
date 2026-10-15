@@ -1,0 +1,153 @@
+{
+    "pasos": [
+        {
+            "comando": "base:import-nominal",
+            "exit": 0,
+            "salida": "Evento seleccionado: #E2 - Nominal destino\nArchivo nominal: archivos\/b\/personas.xlsx\n✅ Importación nominal OK. Personas: 2 | Grupos base: 2"
+        }
+    ],
+    "foto": {
+        "conteos": {
+            "evento_padron": 0,
+            "representacion_grupos": 0,
+            "representacion_miembros": 0,
+            "evento_personas": 5,
+            "representacion_grupos_nominal": 4,
+            "representacion_miembros_nominal": 5,
+            "controles": 0,
+            "registros_checkin": 0
+        },
+        "evento_padron": [],
+        "representacion_grupos": [],
+        "representacion_miembros": [],
+        "evento_personas": [
+            {
+                "evento": "Nominal activo",
+                "cedula": "111",
+                "nombre": "Ana",
+                "telefono": null,
+                "correo": null,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Nominal activo",
+                "cedula": "222",
+                "nombre": "Bruno",
+                "telefono": null,
+                "correo": null,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Nominal activo",
+                "cedula": "333",
+                "nombre": "Carla",
+                "telefono": null,
+                "correo": null,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Nominal destino",
+                "cedula": "900",
+                "nombre": "Nueva Uno",
+                "telefono": null,
+                "correo": null,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            },
+            {
+                "evento": "Nominal destino",
+                "cedula": "901",
+                "nombre": "Nueva Dos",
+                "telefono": null,
+                "correo": null,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            }
+        ],
+        "representacion_grupos_nominal": [
+            {
+                "evento": "Nominal activo",
+                "cabeza": "111",
+                "control_numero": null,
+                "control_serial": null,
+                "checkin_at": null,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Nominal activo",
+                "cabeza": "333",
+                "control_numero": null,
+                "control_serial": null,
+                "checkin_at": null,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Nominal destino",
+                "cabeza": "900",
+                "control_numero": null,
+                "control_serial": null,
+                "checkin_at": null,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            },
+            {
+                "evento": "Nominal destino",
+                "cabeza": "901",
+                "control_numero": null,
+                "control_serial": null,
+                "checkin_at": null,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            }
+        ],
+        "representacion_miembros_nominal": [
+            {
+                "evento": "Nominal activo",
+                "grupo": "111",
+                "persona": "111",
+                "es_cabeza": 0,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Nominal activo",
+                "grupo": "111",
+                "persona": "222",
+                "es_cabeza": 0,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Nominal activo",
+                "grupo": "333",
+                "persona": "333",
+                "es_cabeza": 0,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Nominal destino",
+                "grupo": "900",
+                "persona": "900",
+                "es_cabeza": 1,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            },
+            {
+                "evento": "Nominal destino",
+                "grupo": "901",
+                "persona": "901",
+                "es_cabeza": 1,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            }
+        ],
+        "controles": [],
+        "registros_checkin": []
+    }
+}

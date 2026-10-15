@@ -241,7 +241,10 @@ class Form extends Component
             $importMsgs = [];
 
             if ($evento->tipo_quorum !== 'nominal' && !empty($evento->base_excel_path)) {
-                $exit = Artisan::call('base:import', ['--wipe' => true]);
+                $exit = Artisan::call('base:import', [
+                    'evento_id' => (int) $evento->id,
+                    '--wipe' => true,
+                ]);
                 $out = trim(Artisan::output());
                 $importMsgs[] = $exit === 0 ? '✅ Base importada.' : '⚠️ Falló importación de Base.';
                 if ($out !== '') {
@@ -250,7 +253,10 @@ class Form extends Component
             }
 
             if ($evento->tipo_quorum === 'nominal' && !empty($evento->personas_excel_path)) {
-                $exit = Artisan::call('base:import-nominal', ['--wipe' => true]);
+                $exit = Artisan::call('base:import-nominal', [
+                    'evento_id' => (int) $evento->id,
+                    '--wipe' => true,
+                ]);
                 $out = trim(Artisan::output());
                 $importMsgs[] = $exit === 0 ? '✅ Padrón nominal importado.' : '⚠️ Falló importación del padrón nominal.';
                 if ($out !== '') {

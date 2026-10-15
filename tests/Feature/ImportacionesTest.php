@@ -65,13 +65,13 @@ class ImportacionesTest extends TestCase
         $nombres = [
             'coef_valida', 'coef_suma_100_05', 'coef_suma_99_90', 'coef_suma_100_15', 'coef_suma_99_85',
             'coef_inmueble_duplicado', 'coef_falta_columna', 'coef_wipe_con_poderes', 'coef_sin_wipe_con_grupos',
-            'coef_sin_wipe_evento_vacio', 'coef_evento_activo', 'coef_lote_grande',
+            'coef_sin_wipe_evento_vacio', 'coef_evento_activo', 'coef_sin_destino_varios_eventos', 'coef_destino_inexistente', 'coef_lote_grande',
             'nominal_valida', 'nominal_cedula_duplicada', 'nominal_evento_no_nominal', 'nominal_falta_columna',
-            'nominal_wipe_con_poderes', 'nominal_sin_wipe_agrega', 'nominal_sin_wipe_con_poderes', 'nominal_sin_wipe_cedula_existente', 'nominal_lote_grande',
+            'nominal_wipe_con_poderes', 'nominal_sin_wipe_agrega', 'nominal_sin_wipe_con_poderes', 'nominal_sin_wipe_cedula_existente', 'nominal_destino_explicito_con_activo', 'nominal_sin_destino_varios_eventos', 'nominal_lote_grande',
             'controles_validos', 'controles_numero_duplicado', 'controles_serial_duplicado', 'controles_numero_invalido',
             'controles_serial_vacio', 'controles_falta_columna', 'controles_wipe', 'controles_sin_wipe_existente',
             'controles_lote_grande',
-            'formulario_coeficiente', 'formulario_nominal',
+            'formulario_coeficiente', 'formulario_nominal', 'formulario_con_evento_is_active', 'formulario_nominal_con_evento_is_active',
         ];
 
         return array_combine($nombres, array_map(fn ($n) => [$n], $nombres));
@@ -126,6 +126,18 @@ class ImportacionesTest extends TestCase
         $this->assertSame(0, $r['pasos'][0]['exit']);
         $this->assertSame(5, $r['foto']['conteos']['representacion_grupos_nominal'], '3 existentes + 2 nuevos');
         $this->assertSame(5, $r['foto']['conteos']['representacion_miembros_nominal']);
+    }
+
+    public function test_crear_asamblea_no_toca_la_anterior_aunque_tenga_is_active(): void
+    {
+        $r = $this->esc_formulario_con_evento_is_active();
+        $de = fn (string $tabla, string $evento) => array_values(array_filter($r['foto'][$tabla], fn ($f) => $f['evento'] === $evento));
+
+        $this->assertCount(3, $de('evento_padron', 'Asamblea anterior'));
+        $this->assertSame([['T1-101', 'T1-101'], ['T1-101', 'T1-102'], ['T1-103', 'T1-103']],
+            array_map(fn ($m) => [$m['grupo'], $m['padron']], $de('representacion_miembros', 'Asamblea anterior')), 'el poder T1-101 → T1-102 se conserva');
+        $this->assertSame('T1-101', $de('registros_checkin', 'Asamblea anterior')[0]['inmueble_base'], 'la asistencia sigue enlazada');
+        $this->assertSame(['N-1', 'N-2'], array_column($de('evento_padron', 'Asamblea coeficiente'), 'inmueble'), 'la base nueva va al evento creado');
     }
 
     public function test_nominal_sin_wipe_con_poderes_falla_sin_cambios(): void
@@ -218,7 +230,7 @@ class ImportacionesTest extends TestCase
         $this->padronConPoder($otro);
         DB::table('controles')->insert(['evento_id' => $e, 'numero' => 1, 'serial' => 'S-1', 'estado' => 'ASIGNADO']);
 
-        return ['pasos' => [$this->comando('base:import', ['--wipe' => true])], 'foto' => $this->foto()];
+        return ['pasos' => [$this->comando('base:import', ['evento_id' => $e, '--wipe' => true])], 'foto' => $this->foto()];
     }
 
     private function esc_coef_sin_wipe_con_grupos(): array
@@ -245,15 +257,44 @@ class ImportacionesTest extends TestCase
 
     private function esc_coef_evento_activo(): array
     {
-        // base:import usa el evento is_active=1 aunque haya otro más reciente.
-        $this->evento('Coef activo', 'coeficiente', ['is_active' => 1, 'base_excel_path' => $this->xlsx('archivos/a/base.xlsx', [
+        // Etapa 1H-S: is_active ya no decide el destino. Antes, base:import importaba en el evento
+        // is_active=1 aunque se pidiera otro; ahora importa solo en el evento indicado.
+        $activo = $this->evento('Coef activo', 'coeficiente', ['is_active' => 1, 'base_excel_path' => $this->xlsx('archivos/a/base.xlsx', [
             self::BASE_ENCABEZADO, ['A-1', 'Activo Uno', 100],
         ])]);
-        $this->evento('Coef reciente', 'coeficiente', ['base_excel_path' => $this->xlsx('archivos/b/base.xlsx', [
+        $this->padronConPoder($activo);
+        $reciente = $this->evento('Coef reciente', 'coeficiente', ['base_excel_path' => $this->xlsx('archivos/b/base.xlsx', [
             self::BASE_ENCABEZADO, ['R-1', 'Reciente Uno', 100],
         ])]);
 
+        return ['pasos' => [$this->comando('base:import', ['evento_id' => $reciente, '--wipe' => true])], 'foto' => $this->foto()];
+    }
+
+    private function esc_coef_sin_destino_varios_eventos(): array
+    {
+        // Sin destino y con más de un evento, se niega sin tocar nada (antes elegía el más reciente).
+        $anterior = $this->evento('Coef anterior', 'coeficiente', ['base_excel_path' => $this->xlsx('archivos/a/base.xlsx', [
+            self::BASE_ENCABEZADO, ['A-1', 'Anterior Uno', 100],
+        ])]);
+        $this->padronConPoder($anterior);
+        $this->evento('Coef nuevo', 'coeficiente', ['base_excel_path' => $this->xlsx('archivos/b/base.xlsx', [
+            self::BASE_ENCABEZADO, ['N-1', 'Nuevo Uno', 100],
+        ])]);
+
         return ['pasos' => [$this->comando('base:import', ['--wipe' => true])], 'foto' => $this->foto()];
+    }
+
+    private function esc_coef_destino_inexistente(): array
+    {
+        $e = $this->evento('Coef unico', 'coeficiente', ['base_excel_path' => $this->xlsx('archivos/a/base.xlsx', [
+            self::BASE_ENCABEZADO, ['A-1', 'Uno', 100],
+        ])]);
+        $this->padronConPoder($e);
+
+        return ['pasos' => [
+            $this->comando('base:import', ['evento_id' => 999999, '--wipe' => true]),
+            $this->comando('base:import', ['evento_id' => 'abc', '--wipe' => true]),
+        ], 'foto' => $this->foto()];
     }
 
     private function esc_coef_lote_grande(): array
@@ -356,6 +397,32 @@ class ImportacionesTest extends TestCase
         $this->personasConPoder($e);
 
         return ['pasos' => [$this->comando('base:import-nominal')], 'foto' => $this->foto()];
+    }
+
+    private function esc_nominal_destino_explicito_con_activo(): array
+    {
+        $activo = $this->evento('Nominal activo', 'nominal', ['is_active' => 1, 'personas_excel_path' => $this->xlsx('archivos/a/personas.xlsx', [
+            ['Cedula', 'Nombre'], ['111', 'Ana'],
+        ])]);
+        $this->personasConPoder($activo);
+        $destino = $this->evento('Nominal destino', 'nominal', ['personas_excel_path' => $this->xlsx('archivos/b/personas.xlsx', [
+            ['Cedula', 'Nombre'], ['900', 'Nueva Uno'], ['901', 'Nueva Dos'],
+        ])]);
+
+        return ['pasos' => [$this->comando('base:import-nominal', ['evento_id' => $destino, '--wipe' => true])], 'foto' => $this->foto()];
+    }
+
+    private function esc_nominal_sin_destino_varios_eventos(): array
+    {
+        $anterior = $this->evento('Nominal anterior', 'nominal', ['personas_excel_path' => $this->xlsx('archivos/a/personas.xlsx', [
+            ['Cedula', 'Nombre'], ['111', 'Ana'],
+        ])]);
+        $this->personasConPoder($anterior);
+        $this->evento('Nominal nuevo', 'nominal', ['personas_excel_path' => $this->xlsx('archivos/b/personas.xlsx', [
+            ['Cedula', 'Nombre'], ['900', 'Nueva Uno'],
+        ])]);
+
+        return ['pasos' => [$this->comando('base:import-nominal', ['--wipe' => true])], 'foto' => $this->foto()];
     }
 
     private function esc_nominal_lote_grande(): array
@@ -467,6 +534,35 @@ class ImportacionesTest extends TestCase
         $controles = $this->xlsxBytes([['Numero_control', 'Codigo_control'], [1, 'F-1']]);
 
         return $this->crearEventoPorFormulario('nominal', ['personasExcelFile' => $personas, 'controlesExcelFile' => $controles]);
+    }
+
+    private function esc_formulario_con_evento_is_active(): array
+    {
+        // Riesgo de la Etapa 1H-S: una asamblea anterior ya operada (poder, check-in) quedó con
+        // is_active=1. Crear una nueva no debe tocarla; la base nueva va al evento creado.
+        $anterior = $this->evento('Asamblea anterior', 'coeficiente', ['is_active' => 1, 'base_excel_path' => $this->xlsx('archivos/a/base.xlsx', [
+            self::BASE_ENCABEZADO, ['T1-101', 'Prop', 50], ['T1-102', 'Prop', 30], ['T1-103', 'Prop', 20],
+        ])]);
+        $this->padronConPoder($anterior);
+        $base = $this->xlsxBytes([self::BASE_ENCABEZADO, ['N-1', 'Nuevo Uno', 60], ['N-2', 'Nuevo Dos', 40]]);
+
+        return $this->crearEventoPorFormulario('coeficiente', ['baseExcelFile' => $base]);
+    }
+
+    private function esc_formulario_nominal_con_evento_is_active(): array
+    {
+        $anterior = $this->evento('Asamblea anterior', 'nominal', ['is_active' => 1, 'personas_excel_path' => $this->xlsx('archivos/a/personas.xlsx', [
+            ['Cedula', 'Nombre'], ['111', 'Ana'], ['222', 'Bruno'], ['333', 'Carla'],
+        ])]);
+        $per = $this->personasConPoder($anterior);
+        DB::table('registros_checkin')->insert([
+            'evento_id' => $anterior, 'grupo_id' => 0, 'inmueble_base_id' => null, 'persona_id' => $per['111'],
+            'estado' => 'CHECKED_IN', 'control_numero_snapshot' => 1, 'coef_total_snapshot' => 2, 'asistente_telefono' => '3000000000',
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $personas = $this->xlsxBytes([['Cedula', 'Nombre'], ['900', 'Nueva Uno'], ['901', 'Nueva Dos']]);
+
+        return $this->crearEventoPorFormulario('nominal', ['personasExcelFile' => $personas]);
     }
 
     private function crearEventoPorFormulario(string $tipo, array $archivos): array

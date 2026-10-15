@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Storage;
 class ImportBaseNominal extends Command
 {
     protected $signature = 'base:import-nominal
+                            {evento_id? : Evento destino (obligatorio si hay más de un evento)}
                             {--wipe : Borra las personas anteriores del evento antes de importar}
                             {--file= : Ruta del archivo Excel (sobreescribe personas_excel_path del evento)}';
 
@@ -16,14 +17,9 @@ class ImportBaseNominal extends Command
 
     public function handle(): int
     {
-        // Selección de evento: is_active primero, luego el último
-        $evento = DB::table('eventos')->where('is_active', 1)->orderByDesc('id')->first();
-        if (!$evento) {
-            $evento = DB::table('eventos')->orderByDesc('id')->first();
-        }
+        $evento = $this->eventoDestino();
 
         if (!$evento) {
-            $this->error('No existe ningún evento en la base de datos.');
             return self::FAILURE;
         }
 
@@ -183,6 +179,37 @@ class ImportBaseNominal extends Command
         $this->info("✅ Importación nominal OK. Personas: {$count} | Grupos base: {$gruposCreados}");
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Evento al que se importa: el indicado, o el único evento de la instalación.
+     * Nunca se elige por is_active ni por ser el más reciente, para no borrar otra asamblea.
+     */
+    private function eventoDestino(): ?object
+    {
+        $id = $this->argument('evento_id');
+
+        if ($id !== null) {
+            $evento = ctype_digit((string) $id) ? DB::table('eventos')->where('id', (int) $id)->first() : null;
+
+            if (!$evento) {
+                $this->error("No existe el evento #{$id}.");
+            }
+
+            return $evento;
+        }
+
+        $eventos = DB::table('eventos')->limit(2)->get();
+
+        if ($eventos->count() === 1) {
+            return $eventos->first();
+        }
+
+        $this->error($eventos->isEmpty()
+            ? 'No existe ningún evento en la base de datos.'
+            : 'Hay varios eventos. Indica el evento destino: php artisan base:import-nominal <evento_id>');
+
+        return null;
     }
 
     private function norm(string $s): string

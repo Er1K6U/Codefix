@@ -1,0 +1,182 @@
+{
+    "pasos": [
+        {
+            "flash": "Evento creado. ✅ Padrón nominal importado. (ver log)"
+        }
+    ],
+    "auditoria": [
+        {
+            "modulo": "eventos",
+            "accion": "created",
+            "meta": {
+                "data": {
+                    "slug": "asamblea-nominal",
+                    "activo": true,
+                    "imagen": null,
+                    "titulo": "Asamblea nominal",
+                    "auto_import": [
+                        "✅ Padrón nominal importado.",
+                        "Evento seleccionado: #E2 - Asamblea nominal\nArchivo nominal: eventos\/E2\/personas.xlsx\n✅ Importación nominal OK. Personas: 2 | Grupos base: 2"
+                    ],
+                    "descripcion": null,
+                    "tipo_quorum": "nominal",
+                    "fecha_inicio": "2026-10-20",
+                    "base_excel_path": null,
+                    "controles_excel_path": null
+                }
+            }
+        }
+    ],
+    "foto": {
+        "conteos": {
+            "evento_padron": 0,
+            "representacion_grupos": 0,
+            "representacion_miembros": 0,
+            "evento_personas": 5,
+            "representacion_grupos_nominal": 4,
+            "representacion_miembros_nominal": 5,
+            "controles": 0,
+            "registros_checkin": 1
+        },
+        "evento_padron": [],
+        "representacion_grupos": [],
+        "representacion_miembros": [],
+        "evento_personas": [
+            {
+                "evento": "Asamblea anterior",
+                "cedula": "111",
+                "nombre": "Ana",
+                "telefono": null,
+                "correo": null,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Asamblea anterior",
+                "cedula": "222",
+                "nombre": "Bruno",
+                "telefono": null,
+                "correo": null,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Asamblea anterior",
+                "cedula": "333",
+                "nombre": "Carla",
+                "telefono": null,
+                "correo": null,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Asamblea nominal",
+                "cedula": "900",
+                "nombre": "Nueva Uno",
+                "telefono": null,
+                "correo": null,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            },
+            {
+                "evento": "Asamblea nominal",
+                "cedula": "901",
+                "nombre": "Nueva Dos",
+                "telefono": null,
+                "correo": null,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            }
+        ],
+        "representacion_grupos_nominal": [
+            {
+                "evento": "Asamblea anterior",
+                "cabeza": "111",
+                "control_numero": null,
+                "control_serial": null,
+                "checkin_at": null,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Asamblea anterior",
+                "cabeza": "333",
+                "control_numero": null,
+                "control_serial": null,
+                "checkin_at": null,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Asamblea nominal",
+                "cabeza": "900",
+                "control_numero": null,
+                "control_serial": null,
+                "checkin_at": null,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            },
+            {
+                "evento": "Asamblea nominal",
+                "cabeza": "901",
+                "control_numero": null,
+                "control_serial": null,
+                "checkin_at": null,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            }
+        ],
+        "representacion_miembros_nominal": [
+            {
+                "evento": "Asamblea anterior",
+                "grupo": "111",
+                "persona": "111",
+                "es_cabeza": 0,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Asamblea anterior",
+                "grupo": "111",
+                "persona": "222",
+                "es_cabeza": 0,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Asamblea anterior",
+                "grupo": "333",
+                "persona": "333",
+                "es_cabeza": 0,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Asamblea nominal",
+                "grupo": "900",
+                "persona": "900",
+                "es_cabeza": 1,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            },
+            {
+                "evento": "Asamblea nominal",
+                "grupo": "901",
+                "persona": "901",
+                "es_cabeza": 1,
+                "created_at": "2026-10-15 10:00:00",
+                "updated_at": "2026-10-15 10:00:00"
+            }
+        ],
+        "controles": [],
+        "registros_checkin": [
+            {
+                "evento": "Asamblea anterior",
+                "persona": "111",
+                "inmueble_base": null,
+                "estado": "CHECKED_IN",
+                "control_numero_snapshot": 1
+            }
+        ]
+    }
+}
