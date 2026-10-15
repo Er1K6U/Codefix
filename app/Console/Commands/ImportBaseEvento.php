@@ -2,6 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Support\ActividadEvento;
+use App\Support\ReimportacionBloqueada;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -141,59 +143,68 @@ class ImportBaseEvento extends Command
             return self::FAILURE;
         }
 
-        DB::transaction(function () use ($eventoId, $wipe, $data) {
-            if ($wipe) {
-                DB::table('representacion_miembros')->where('evento_id', $eventoId)->delete();
-                DB::table('representacion_grupos')->where('evento_id', $eventoId)->delete();
-                DB::table('evento_padron')->where('evento_id', $eventoId)->delete();
-            }
+        try {
+            DB::transaction(function () use ($eventoId, $wipe, $data) {
+                if ($wipe) {
+                    // Antes del primer borrado: con poderes, asistencia o controles entregados no se reemplaza.
+                    ActividadEvento::exigirSinActividad($eventoId, 'la base de inmuebles');
 
-            foreach (array_chunk($data, 500) as $chunk) {
-                DB::table('evento_padron')->insert($chunk);
-            }
+                    DB::table('representacion_miembros')->where('evento_id', $eventoId)->delete();
+                    DB::table('representacion_grupos')->where('evento_id', $eventoId)->delete();
+                    DB::table('evento_padron')->where('evento_id', $eventoId)->delete();
+                }
 
-            // Crear grupos base: cada inmueble arranca como cabeza de su propio grupo
-            $padron = DB::table('evento_padron')
-                ->select('id')
-                ->where('evento_id', $eventoId)
-                ->get();
+                foreach (array_chunk($data, 500) as $chunk) {
+                    DB::table('evento_padron')->insert($chunk);
+                }
 
-            // Por lotes: primero los grupos y luego sus cabezas. El id de cada grupo se busca por su
-            // cabeza (única por evento), sin suponer ids consecutivos.
-            $now = now();
+                // Crear grupos base: cada inmueble arranca como cabeza de su propio grupo
+                $padron = DB::table('evento_padron')
+                    ->select('id')
+                    ->where('evento_id', $eventoId)
+                    ->get();
 
-            $gruposData = $padron->map(fn($p) => [
-                'evento_id' => $eventoId,
-                'cabeza_padron_id' => $p->id,
-                'control_numero' => null,
-                'control_serial' => null,
-                'checkin_at' => null,
-                'checkin_by' => null,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ])->all();
+                // Por lotes: primero los grupos y luego sus cabezas. El id de cada grupo se busca por su
+                // cabeza (única por evento), sin suponer ids consecutivos.
+                $now = now();
 
-            foreach (array_chunk($gruposData, 500) as $chunk) {
-                DB::table('representacion_grupos')->insert($chunk);
-            }
+                $gruposData = $padron->map(fn($p) => [
+                    'evento_id' => $eventoId,
+                    'cabeza_padron_id' => $p->id,
+                    'control_numero' => null,
+                    'control_serial' => null,
+                    'checkin_at' => null,
+                    'checkin_by' => null,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ])->all();
 
-            $grupos = DB::table('representacion_grupos')
-                ->where('evento_id', $eventoId)
-                ->pluck('id', 'cabeza_padron_id');
+                foreach (array_chunk($gruposData, 500) as $chunk) {
+                    DB::table('representacion_grupos')->insert($chunk);
+                }
 
-            $miembrosData = $padron->map(fn($p) => [
-                'grupo_id' => $grupos[$p->id],
-                'evento_id' => $eventoId,
-                'padron_id' => $p->id,
-                'es_cabeza' => true,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ])->all();
+                $grupos = DB::table('representacion_grupos')
+                    ->where('evento_id', $eventoId)
+                    ->pluck('id', 'cabeza_padron_id');
 
-            foreach (array_chunk($miembrosData, 500) as $chunk) {
-                DB::table('representacion_miembros')->insert($chunk);
-            }
-        });
+                $miembrosData = $padron->map(fn($p) => [
+                    'grupo_id' => $grupos[$p->id],
+                    'evento_id' => $eventoId,
+                    'padron_id' => $p->id,
+                    'es_cabeza' => true,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ])->all();
+
+                foreach (array_chunk($miembrosData, 500) as $chunk) {
+                    DB::table('representacion_miembros')->insert($chunk);
+                }
+            });
+        } catch (ReimportacionBloqueada $e) {
+            $this->error($e->getMessage());
+            ActividadEvento::auditarBloqueo($e, 'base:import');
+            return self::FAILURE;
+        }
 
         $this->info("✅ Importación OK. Filas: {$count} | Suma coef: " . number_format($sumCoef, 4, '.', ''));
         $this->info("✅ Grupos base creados (1 por inmueble).");

@@ -652,7 +652,7 @@ class ImportacionesTest extends TestCase
         foreach ($cabezas as $cabeza => $miembros) {
             $g = DB::table('representacion_grupos_nominal')->insertGetId(['evento_id' => $e, 'cabeza_persona_id' => $per[$cabeza]]);
             foreach ($miembros as $m) {
-                DB::table('representacion_miembros_nominal')->insert(['evento_id' => $e, 'grupo_id' => $g, 'persona_id' => $per[$m], 'es_cabeza' => (int) ($m === $cabeza)]);
+                DB::table('representacion_miembros_nominal')->insert(['evento_id' => $e, 'grupo_id' => $g, 'persona_id' => $per[$m], 'es_cabeza' => (int) ((string) $m === (string) $cabeza)]);
             }
         }
 

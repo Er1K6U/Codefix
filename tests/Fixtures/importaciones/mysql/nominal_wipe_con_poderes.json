@@ -2,8 +2,8 @@
     "pasos": [
         {
             "comando": "base:import-nominal",
-            "exit": 0,
-            "salida": "Evento seleccionado: #E1 - Nominal wipe\nArchivo nominal: archivos\/a\/personas.xlsx\n✅ Importación nominal OK. Personas: 2 | Grupos base: 2"
+            "exit": 1,
+            "salida": "Evento seleccionado: #E1 - Nominal wipe\nArchivo nominal: archivos\/a\/personas.xlsx\nNo se reemplazó la base de personas: la asamblea #E1 ya tiene actividad (asistencias: 1, poderes: 1). Se canceló sin borrar nada, para no perder poderes, asistencia ni controles entregados."
         }
     ],
     "foto": {
@@ -11,9 +11,9 @@
             "evento_padron": 0,
             "representacion_grupos": 0,
             "representacion_miembros": 0,
-            "evento_personas": 2,
+            "evento_personas": 3,
             "representacion_grupos_nominal": 2,
-            "representacion_miembros_nominal": 2,
+            "representacion_miembros_nominal": 3,
             "controles": 0,
             "registros_checkin": 1
         },
@@ -23,66 +23,83 @@
         "evento_personas": [
             {
                 "evento": "Nominal wipe",
-                "cedula": "900",
-                "nombre": "Nueva Uno",
+                "cedula": "111",
+                "nombre": "Ana",
                 "telefono": null,
                 "correo": null,
-                "created_at": "2026-10-15 10:00:00",
-                "updated_at": "2026-10-15 10:00:00"
+                "created_at": null,
+                "updated_at": null
             },
             {
                 "evento": "Nominal wipe",
-                "cedula": "111",
-                "nombre": "Ana Reimportada",
+                "cedula": "222",
+                "nombre": "Bruno",
                 "telefono": null,
                 "correo": null,
-                "created_at": "2026-10-15 10:00:00",
-                "updated_at": "2026-10-15 10:00:00"
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Nominal wipe",
+                "cedula": "333",
+                "nombre": "Carla",
+                "telefono": null,
+                "correo": null,
+                "created_at": null,
+                "updated_at": null
             }
         ],
         "representacion_grupos_nominal": [
-            {
-                "evento": "Nominal wipe",
-                "cabeza": "900",
-                "control_numero": null,
-                "control_serial": null,
-                "checkin_at": null,
-                "created_at": "2026-10-15 10:00:00",
-                "updated_at": "2026-10-15 10:00:00"
-            },
             {
                 "evento": "Nominal wipe",
                 "cabeza": "111",
                 "control_numero": null,
                 "control_serial": null,
                 "checkin_at": null,
-                "created_at": "2026-10-15 10:00:00",
-                "updated_at": "2026-10-15 10:00:00"
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Nominal wipe",
+                "cabeza": "333",
+                "control_numero": null,
+                "control_serial": null,
+                "checkin_at": null,
+                "created_at": null,
+                "updated_at": null
             }
         ],
         "representacion_miembros_nominal": [
             {
                 "evento": "Nominal wipe",
-                "grupo": "900",
-                "persona": "900",
+                "grupo": "111",
+                "persona": "111",
                 "es_cabeza": 1,
-                "created_at": "2026-10-15 10:00:00",
-                "updated_at": "2026-10-15 10:00:00"
+                "created_at": null,
+                "updated_at": null
             },
             {
                 "evento": "Nominal wipe",
                 "grupo": "111",
-                "persona": "111",
+                "persona": "222",
+                "es_cabeza": 0,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Nominal wipe",
+                "grupo": "333",
+                "persona": "333",
                 "es_cabeza": 1,
-                "created_at": "2026-10-15 10:00:00",
-                "updated_at": "2026-10-15 10:00:00"
+                "created_at": null,
+                "updated_at": null
             }
         ],
         "controles": [],
         "registros_checkin": [
             {
                 "evento": "Nominal wipe",
-                "persona": null,
+                "persona": "111",
                 "inmueble_base": null,
                 "estado": "CHECKED_IN",
                 "control_numero_snapshot": 5

@@ -119,7 +119,7 @@
                 "evento": "Nominal agrega",
                 "grupo": "111",
                 "persona": "111",
-                "es_cabeza": 0,
+                "es_cabeza": 1,
                 "created_at": null,
                 "updated_at": null
             },
@@ -127,7 +127,7 @@
                 "evento": "Nominal agrega",
                 "grupo": "222",
                 "persona": "222",
-                "es_cabeza": 0,
+                "es_cabeza": 1,
                 "created_at": null,
                 "updated_at": null
             },
@@ -135,7 +135,7 @@
                 "evento": "Nominal agrega",
                 "grupo": "333",
                 "persona": "333",
-                "es_cabeza": 0,
+                "es_cabeza": 1,
                 "created_at": null,
                 "updated_at": null
             },

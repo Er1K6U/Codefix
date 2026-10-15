@@ -2,8 +2,8 @@
     "pasos": [
         {
             "comando": "controls:import-excel",
-            "exit": 0,
-            "salida": "Evento seleccionado: #E1 - Controles\nArchivo controles: archivos\/a\/controles.xlsx\n✅ Controles importados: 2 para evento E1 (wipe)."
+            "exit": 1,
+            "salida": "Evento seleccionado: #E1 - Controles\nArchivo controles: archivos\/a\/controles.xlsx\nNo se reemplazó la lista de controles: la asamblea #E1 ya tiene actividad (controles entregados: 1). Se canceló sin borrar nada, para no perder poderes, asistencia ni controles entregados."
         }
     ],
     "foto": {
@@ -14,7 +14,7 @@
             "evento_personas": 0,
             "representacion_grupos_nominal": 0,
             "representacion_miembros_nominal": 0,
-            "controles": 3,
+            "controles": 2,
             "registros_checkin": 0
         },
         "evento_padron": [],
@@ -25,6 +25,15 @@
         "representacion_miembros_nominal": [],
         "controles": [
             {
+                "evento": "Controles",
+                "numero": 1,
+                "serial": "VIEJO-1",
+                "estado": "ASIGNADO",
+                "asignado_a_registro_id": null,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
                 "evento": "Otro",
                 "numero": 1,
                 "serial": "OTRO-1",
@@ -32,24 +41,6 @@
                 "asignado_a_registro_id": null,
                 "created_at": null,
                 "updated_at": null
-            },
-            {
-                "evento": "Controles",
-                "numero": 1,
-                "serial": "NUEVO-1",
-                "estado": "LIBRE",
-                "asignado_a_registro_id": null,
-                "created_at": "2026-10-15 10:00:00",
-                "updated_at": "2026-10-15 10:00:00"
-            },
-            {
-                "evento": "Controles",
-                "numero": 2,
-                "serial": "NUEVO-2",
-                "estado": "LIBRE",
-                "asignado_a_registro_id": null,
-                "created_at": "2026-10-15 10:00:00",
-                "updated_at": "2026-10-15 10:00:00"
             }
         ],
         "registros_checkin": []

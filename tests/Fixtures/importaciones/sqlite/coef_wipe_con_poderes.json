@@ -2,15 +2,15 @@
     "pasos": [
         {
             "comando": "base:import",
-            "exit": 0,
-            "salida": "Evento seleccionado: #E2 - Coef wipe\nArchivo base: archivos\/a\/base.xlsx\n✅ Importación OK. Filas: 2 | Suma coef: 100.0000\n✅ Grupos base creados (1 por inmueble)."
+            "exit": 1,
+            "salida": "Evento seleccionado: #E2 - Coef wipe\nArchivo base: archivos\/a\/base.xlsx\nNo se reemplazó la base de inmuebles: la asamblea #E2 ya tiene actividad (asistencias: 1, poderes: 1, grupos con check-in: 1, controles entregados: 1). Se canceló sin borrar nada, para no perder poderes, asistencia ni controles entregados."
         }
     ],
     "foto": {
         "conteos": {
-            "evento_padron": 5,
+            "evento_padron": 6,
             "representacion_grupos": 4,
-            "representacion_miembros": 5,
+            "representacion_miembros": 6,
             "evento_personas": 0,
             "representacion_grupos_nominal": 0,
             "representacion_miembros_nominal": 0,
@@ -18,6 +18,39 @@
             "registros_checkin": 2
         },
         "evento_padron": [
+            {
+                "evento": "Coef wipe",
+                "inmueble": "T1-101",
+                "propietario": "Prop T1-101",
+                "coeficiente": 50,
+                "asistente": null,
+                "celular": null,
+                "correo": null,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Coef wipe",
+                "inmueble": "T1-102",
+                "propietario": "Prop T1-102",
+                "coeficiente": 30,
+                "asistente": null,
+                "celular": null,
+                "correo": null,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Coef wipe",
+                "inmueble": "T1-103",
+                "propietario": "Prop T1-103",
+                "coeficiente": 20,
+                "asistente": null,
+                "celular": null,
+                "correo": null,
+                "created_at": null,
+                "updated_at": null
+            },
             {
                 "evento": "Otro evento",
                 "inmueble": "T1-101",
@@ -50,31 +83,29 @@
                 "correo": null,
                 "created_at": null,
                 "updated_at": null
-            },
-            {
-                "evento": "Coef wipe",
-                "inmueble": "N-1",
-                "propietario": "Nuevo Uno",
-                "coeficiente": 60,
-                "asistente": null,
-                "celular": null,
-                "correo": null,
-                "created_at": "2026-10-15 10:00:00",
-                "updated_at": "2026-10-15 10:00:00"
-            },
-            {
-                "evento": "Coef wipe",
-                "inmueble": "N-2",
-                "propietario": "Nuevo Dos",
-                "coeficiente": 40,
-                "asistente": null,
-                "celular": null,
-                "correo": null,
-                "created_at": "2026-10-15 10:00:00",
-                "updated_at": "2026-10-15 10:00:00"
             }
         ],
         "representacion_grupos": [
+            {
+                "evento": "Coef wipe",
+                "cabeza": "T1-101",
+                "control_numero": "1",
+                "control_serial": "S-1",
+                "checkin_at": null,
+                "checkin_by": null,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Coef wipe",
+                "cabeza": "T1-103",
+                "control_numero": null,
+                "control_serial": null,
+                "checkin_at": null,
+                "checkin_by": null,
+                "created_at": null,
+                "updated_at": null
+            },
             {
                 "evento": "Otro evento",
                 "cabeza": "T1-101",
@@ -94,29 +125,33 @@
                 "checkin_by": null,
                 "created_at": null,
                 "updated_at": null
-            },
-            {
-                "evento": "Coef wipe",
-                "cabeza": "N-1",
-                "control_numero": null,
-                "control_serial": null,
-                "checkin_at": null,
-                "checkin_by": null,
-                "created_at": "2026-10-15 10:00:00",
-                "updated_at": "2026-10-15 10:00:00"
-            },
-            {
-                "evento": "Coef wipe",
-                "cabeza": "N-2",
-                "control_numero": null,
-                "control_serial": null,
-                "checkin_at": null,
-                "checkin_by": null,
-                "created_at": "2026-10-15 10:00:00",
-                "updated_at": "2026-10-15 10:00:00"
             }
         ],
         "representacion_miembros": [
+            {
+                "evento": "Coef wipe",
+                "grupo": "T1-101",
+                "padron": "T1-101",
+                "es_cabeza": 1,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Coef wipe",
+                "grupo": "T1-101",
+                "padron": "T1-102",
+                "es_cabeza": 0,
+                "created_at": null,
+                "updated_at": null
+            },
+            {
+                "evento": "Coef wipe",
+                "grupo": "T1-103",
+                "padron": "T1-103",
+                "es_cabeza": 1,
+                "created_at": null,
+                "updated_at": null
+            },
             {
                 "evento": "Otro evento",
                 "grupo": "T1-101",
@@ -140,22 +175,6 @@
                 "es_cabeza": 1,
                 "created_at": null,
                 "updated_at": null
-            },
-            {
-                "evento": "Coef wipe",
-                "grupo": "N-1",
-                "padron": "N-1",
-                "es_cabeza": 1,
-                "created_at": "2026-10-15 10:00:00",
-                "updated_at": "2026-10-15 10:00:00"
-            },
-            {
-                "evento": "Coef wipe",
-                "grupo": "N-2",
-                "padron": "N-2",
-                "es_cabeza": 1,
-                "created_at": "2026-10-15 10:00:00",
-                "updated_at": "2026-10-15 10:00:00"
             }
         ],
         "evento_personas": [],
@@ -176,7 +195,7 @@
             {
                 "evento": "Coef wipe",
                 "persona": null,
-                "inmueble_base": "borrado",
+                "inmueble_base": "T1-101",
                 "estado": "CHECKED_IN",
                 "control_numero_snapshot": 1
             },
