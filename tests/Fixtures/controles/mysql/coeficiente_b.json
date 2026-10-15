@@ -1,0 +1,251 @@
+{
+    "base_turning": {
+        "tipo": "coeficiente",
+        "total": 100.0,
+        "rows": [
+            {
+                "control_numero": 1,
+                "codigo": "B-0001",
+                "inmueble": "T1-101",
+                "propietario": "Propietario B Uno",
+                "coef": "6000",
+                "estado": "CHECKED_IN"
+            },
+            {
+                "control_numero": 2,
+                "codigo": "B-0002",
+                "inmueble": "T1-102",
+                "propietario": "Propietario B Dos",
+                "coef": "4000",
+                "estado": "CHECKED_IN"
+            }
+        ],
+        "copyText": [
+            [
+                "B-0001",
+                "1",
+                "T1-101",
+                "Propietario B Uno",
+                "6000"
+            ],
+            [
+                "B-0002",
+                "2",
+                "T1-102",
+                "Propietario B Dos",
+                "4000"
+            ]
+        ]
+    },
+    "informe": {
+        "Resumen": [
+            [
+                "COEFIX - INFORME DE ASAMBLEA"
+            ],
+            [
+                "Evento:",
+                "Escenario B coeficiente"
+            ],
+            [
+                "Generado:",
+                "2026-10-15 10:00"
+            ],
+            [
+                ""
+            ],
+            [
+                "RESUMEN GENERAL"
+            ],
+            [
+                "Controles activos:",
+                2
+            ],
+            [
+                "Coeficiente presente (CHECKED_IN):",
+                100.0
+            ],
+            [
+                "Coeficiente retirado (RETIRADO):",
+                0.0
+            ],
+            [
+                "Coeficiente no asistió:",
+                0.0
+            ],
+            [
+                "Coeficiente total (presente + retirado + no asistió):",
+                100.0
+            ]
+        ],
+        "Asistencia": [
+            [
+                "ASISTENCIA (BASE TURNING)"
+            ],
+            [
+                ""
+            ],
+            [
+                "# Control",
+                "Código",
+                "Inmueble cabeza",
+                "Propietario",
+                "Asistente",
+                "Teléfono",
+                "Correo",
+                "Coef",
+                "Estado",
+                "Hora check-in",
+                "Hora retiro",
+                "Hora reingreso"
+            ],
+            [
+                1,
+                "B-0001",
+                "T1-101",
+                "Propietario B Uno",
+                "",
+                "3000000000",
+                "",
+                60.0,
+                "CHECKED_IN",
+                "2026-10-15 08:30:00 AM",
+                "",
+                ""
+            ],
+            [
+                2,
+                "B-0002",
+                "T1-102",
+                "Propietario B Dos",
+                "",
+                "3000000000",
+                "",
+                40.0,
+                "CHECKED_IN",
+                "2026-10-15 08:30:00 AM",
+                "",
+                ""
+            ]
+        ],
+        "Quórum": [
+            [
+                "QUÓRUM (SNAPSHOT ACTUAL)"
+            ],
+            [
+                ""
+            ],
+            [
+                "Coeficiente presente (CHECKED_IN):",
+                100.0
+            ],
+            [
+                "Coeficiente retirado (RETIRADO):",
+                0.0
+            ],
+            [
+                "Coeficiente total (presente + retirado):",
+                100.0
+            ],
+            [
+                ""
+            ],
+            [
+                "PRESENTES"
+            ],
+            [
+                "Inmueble cabeza",
+                "Propietario",
+                "Coef"
+            ],
+            [
+                "T1-101",
+                "Propietario B Uno",
+                60.0
+            ],
+            [
+                "T1-102",
+                "Propietario B Dos",
+                40.0
+            ],
+            [
+                ""
+            ],
+            [
+                "RETIRADOS"
+            ],
+            [
+                "Inmueble cabeza",
+                "Propietario",
+                "Coef"
+            ]
+        ],
+        "Ausentes": [
+            [
+                "AUSENTES (NO REGISTRADOS)"
+            ],
+            [
+                ""
+            ],
+            [
+                "Inmueble",
+                "Propietario",
+                "Coeficiente",
+                "Asistente",
+                "Celular",
+                "Correo"
+            ],
+            [
+                ""
+            ]
+        ],
+        "Poderes": [
+            [
+                "PODERES \/ REPRESENTACIONES"
+            ],
+            [
+                ""
+            ],
+            [
+                "Inmueble cabeza",
+                "Propietario cabeza",
+                "# Poderes",
+                "Coef propio",
+                "Coef poderes",
+                "Coef total",
+                "Estado",
+                "# Control",
+                "Código Control"
+            ],
+            [
+                ""
+            ],
+            [
+                "TOTAL",
+                "",
+                "",
+                0.0,
+                0.0,
+                0.0,
+                "",
+                "",
+                ""
+            ]
+        ],
+        "Poderes Detalle": [
+            [
+                "PODERES · DETALLE POR CABEZA"
+            ],
+            [
+                ""
+            ],
+            [
+                "Cabeza (inmueble)",
+                "Propietario cabeza",
+                "Coef cabeza",
+                "Apoderado (inmueble)",
+                "Apoderado (propietario)",
+                "Coef apoderado"
+            ]
+        ]
+    }
+}

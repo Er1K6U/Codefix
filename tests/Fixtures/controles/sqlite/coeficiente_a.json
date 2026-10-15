@@ -1,0 +1,577 @@
+{
+    "base_turning": {
+        "tipo": "coeficiente",
+        "total": 101.0,
+        "rows": [
+            {
+                "control_numero": 1,
+                "codigo": "A-0001",
+                "inmueble": "T1-101",
+                "propietario": "Propietario Uno",
+                "coef": "3500",
+                "estado": "CHECKED_IN"
+            },
+            {
+                "control_numero": 2,
+                "codigo": "A-0002",
+                "inmueble": "T1-201",
+                "propietario": "Propietario Tres",
+                "coef": "1000",
+                "estado": "CHECKED_IN"
+            },
+            {
+                "control_numero": 3,
+                "codigo": "A-0003",
+                "inmueble": "T1-202",
+                "propietario": "Propietario Cuatro",
+                "coef": "2000",
+                "estado": "RETIRADO"
+            },
+            {
+                "control_numero": 6,
+                "codigo": "A-0005",
+                "inmueble": "T2-202",
+                "propietario": "Propietario Ocho",
+                "coef": "800",
+                "estado": "CHECKED_IN"
+            },
+            {
+                "control_numero": 6,
+                "codigo": "A-0006",
+                "inmueble": "T2-202",
+                "propietario": "Propietario Ocho",
+                "coef": "800",
+                "estado": "CHECKED_IN"
+            },
+            {
+                "control_numero": 7,
+                "codigo": "A-0007",
+                "inmueble": "T2-102",
+                "propietario": "Propietario Seis",
+                "coef": "900",
+                "estado": "CHECKED_IN"
+            },
+            {
+                "control_numero": 99,
+                "codigo": "",
+                "inmueble": "T2-201",
+                "propietario": "Propietario Siete",
+                "coef": "1100",
+                "estado": "CHECKED_IN"
+            }
+        ],
+        "copyText": [
+            [
+                "A-0001",
+                "1",
+                "T1-101",
+                "Propietario Uno",
+                "3500"
+            ],
+            [
+                "A-0002",
+                "2",
+                "T1-201",
+                "Propietario Tres",
+                "1000"
+            ],
+            [
+                "A-0003",
+                "3",
+                "T1-202",
+                "Propietario Cuatro",
+                "2000"
+            ],
+            [
+                "A-0005",
+                "6",
+                "T2-202",
+                "Propietario Ocho",
+                "800"
+            ],
+            [
+                "A-0006",
+                "6",
+                "T2-202",
+                "Propietario Ocho",
+                "800"
+            ],
+            [
+                "A-0007",
+                "7",
+                "T2-102",
+                "Propietario Seis",
+                "900"
+            ],
+            [
+                "",
+                "99",
+                "T2-201",
+                "Propietario Siete",
+                "1100"
+            ]
+        ]
+    },
+    "informe": {
+        "Resumen": [
+            [
+                "COEFIX - INFORME DE ASAMBLEA"
+            ],
+            [
+                "Evento:",
+                "Escenario A coeficiente"
+            ],
+            [
+                "Generado:",
+                "2026-10-15 10:00"
+            ],
+            [
+                ""
+            ],
+            [
+                "RESUMEN GENERAL"
+            ],
+            [
+                "Controles activos:",
+                4
+            ],
+            [
+                "Coeficiente presente (CHECKED_IN):",
+                73.0
+            ],
+            [
+                "Coeficiente retirado (RETIRADO):",
+                20.0
+            ],
+            [
+                "Coeficiente no asistió:",
+                7.0
+            ],
+            [
+                "Coeficiente total (presente + retirado + no asistió):",
+                100.0
+            ]
+        ],
+        "Asistencia": [
+            [
+                "ASISTENCIA (BASE TURNING)"
+            ],
+            [
+                ""
+            ],
+            [
+                "# Control",
+                "Código",
+                "Inmueble cabeza",
+                "Propietario",
+                "Asistente",
+                "Teléfono",
+                "Correo",
+                "Coef",
+                "Estado",
+                "Hora check-in",
+                "Hora retiro",
+                "Hora reingreso"
+            ],
+            [
+                1,
+                "A-0001",
+                "T1-101",
+                "Propietario Uno",
+                "Asistente Uno",
+                "3000000000",
+                "",
+                35.0,
+                "CHECKED_IN",
+                "2026-10-15 08:30:00 AM",
+                "2026-10-15 09:00:00 AM",
+                "2026-10-15 09:30:00 AM"
+            ],
+            [
+                2,
+                "A-0002",
+                "T1-201",
+                "Propietario Tres",
+                "",
+                "3000000000",
+                "",
+                10.0,
+                "CHECKED_IN",
+                "2026-10-15 08:30:00 AM",
+                "",
+                ""
+            ],
+            [
+                3,
+                "A-0003",
+                "T1-202",
+                "Propietario Cuatro",
+                "",
+                "3000000000",
+                "",
+                20.0,
+                "RETIRADO",
+                "2026-10-15 08:30:00 AM",
+                "2026-10-15 09:15:00 AM",
+                ""
+            ],
+            [
+                6,
+                "A-0005",
+                "T2-202",
+                "Propietario Ocho",
+                "",
+                "3000000000",
+                "",
+                8.0,
+                "CHECKED_IN",
+                "2026-10-15 08:30:00 AM",
+                "",
+                ""
+            ],
+            [
+                6,
+                "A-0006",
+                "T2-202",
+                "Propietario Ocho",
+                "",
+                "3000000000",
+                "",
+                8.0,
+                "CHECKED_IN",
+                "2026-10-15 08:30:00 AM",
+                "",
+                ""
+            ],
+            [
+                7,
+                "A-0007",
+                "T2-102",
+                "Propietario Seis",
+                "",
+                "3000000000",
+                "",
+                9.0,
+                "CHECKED_IN",
+                "2026-10-15 08:30:00 AM",
+                "",
+                ""
+            ],
+            [
+                99,
+                "",
+                "T2-201",
+                "Propietario Siete",
+                "",
+                "3000000000",
+                "",
+                11.0,
+                "CHECKED_IN",
+                "2026-10-15 08:30:00 AM",
+                "",
+                ""
+            ]
+        ],
+        "Quórum": [
+            [
+                "QUÓRUM (SNAPSHOT ACTUAL)"
+            ],
+            [
+                ""
+            ],
+            [
+                "Coeficiente presente (CHECKED_IN):",
+                73.0
+            ],
+            [
+                "Coeficiente retirado (RETIRADO):",
+                20.0
+            ],
+            [
+                "Coeficiente total (presente + retirado):",
+                93.0
+            ],
+            [
+                ""
+            ],
+            [
+                "PRESENTES"
+            ],
+            [
+                "Inmueble cabeza",
+                "Propietario",
+                "Coef"
+            ],
+            [
+                "T1-101",
+                "Propietario Uno",
+                35.0
+            ],
+            [
+                "T1-201",
+                "Propietario Tres",
+                10.0
+            ],
+            [
+                "T2-202",
+                "Propietario Ocho",
+                8.0
+            ],
+            [
+                "T2-102",
+                "Propietario Seis",
+                9.0
+            ],
+            [
+                "T2-201",
+                "Propietario Siete",
+                11.0
+            ],
+            [
+                ""
+            ],
+            [
+                "RETIRADOS"
+            ],
+            [
+                "Inmueble cabeza",
+                "Propietario",
+                "Coef"
+            ],
+            [
+                "T1-202",
+                "Propietario Cuatro",
+                20.0
+            ]
+        ],
+        "Ausentes": [
+            [
+                "AUSENTES (NO REGISTRADOS)"
+            ],
+            [
+                ""
+            ],
+            [
+                "Inmueble",
+                "Propietario",
+                "Coeficiente",
+                "Asistente",
+                "Celular",
+                "Correo"
+            ],
+            [
+                "T3-101",
+                "Propietario Nueve",
+                7.0,
+                "",
+                "",
+                ""
+            ],
+            [
+                ""
+            ]
+        ],
+        "Poderes": [
+            [
+                "PODERES \/ REPRESENTACIONES"
+            ],
+            [
+                ""
+            ],
+            [
+                "Inmueble cabeza",
+                "Propietario cabeza",
+                "# Poderes",
+                "Coef propio",
+                "Coef poderes",
+                "Coef total",
+                "Estado",
+                "# Control",
+                "Código Control"
+            ],
+            [
+                "T1-101",
+                "Propietario Uno",
+                1,
+                20.0,
+                15.0,
+                35.0,
+                "CHECKED_IN",
+                1,
+                "A-0001"
+            ],
+            [
+                "T1-201",
+                "Propietario Tres",
+                0,
+                10.0,
+                0.0,
+                10.0,
+                "CHECKED_IN",
+                2,
+                ""
+            ],
+            [
+                "T1-202",
+                "Propietario Cuatro",
+                1,
+                12.5,
+                7.5,
+                20.0,
+                "RETIRADO",
+                3,
+                ""
+            ],
+            [
+                "T2-102",
+                "Propietario Seis",
+                0,
+                9.0,
+                0.0,
+                9.0,
+                "CHECKED_IN",
+                7,
+                "A-0007"
+            ],
+            [
+                "T2-201",
+                "Propietario Siete",
+                0,
+                11.0,
+                0.0,
+                11.0,
+                "CHECKED_IN",
+                99,
+                ""
+            ],
+            [
+                "T2-202",
+                "Propietario Ocho",
+                0,
+                8.0,
+                0.0,
+                8.0,
+                "CHECKED_IN",
+                6,
+                ""
+            ],
+            [
+                "T3-101",
+                "Propietario Nueve",
+                0,
+                7.0,
+                0.0,
+                7.0,
+                "",
+                "",
+                ""
+            ],
+            [
+                ""
+            ],
+            [
+                "TOTAL",
+                "",
+                "",
+                77.5,
+                22.5,
+                100.0,
+                "",
+                "",
+                ""
+            ]
+        ],
+        "Poderes Detalle": [
+            [
+                "PODERES · DETALLE POR CABEZA"
+            ],
+            [
+                ""
+            ],
+            [
+                "Cabeza (inmueble)",
+                "Propietario cabeza",
+                "Coef cabeza",
+                "Apoderado (inmueble)",
+                "Apoderado (propietario)",
+                "Coef apoderado"
+            ],
+            [
+                "CABEZA",
+                "T1-101",
+                20.0,
+                "Propietario Uno",
+                "",
+                ""
+            ],
+            [
+                "",
+                "",
+                "",
+                "",
+                "",
+                ""
+            ],
+            [
+                "T1-101",
+                "Propietario Uno",
+                20.0,
+                "T1-102",
+                "Propietario Dos",
+                15.0
+            ],
+            [
+                "",
+                "",
+                "",
+                "",
+                "Subtotal apoderados:",
+                15.0
+            ],
+            [
+                ""
+            ],
+            [
+                ""
+            ],
+            [
+                "CABEZA",
+                "T1-202",
+                12.5,
+                "Propietario Cuatro",
+                "",
+                ""
+            ],
+            [
+                "",
+                "",
+                "",
+                "",
+                "",
+                ""
+            ],
+            [
+                "T1-202",
+                "Propietario Cuatro",
+                12.5,
+                "T2-101",
+                "Propietario Cinco",
+                7.5
+            ],
+            [
+                "",
+                "",
+                "",
+                "",
+                "Subtotal apoderados:",
+                7.5
+            ],
+            [
+                ""
+            ],
+            [
+                ""
+            ]
+        ]
+    }
+}

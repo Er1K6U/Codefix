@@ -2,6 +2,7 @@
 
 namespace App\Exports;
 
+use App\Support\ControlesPorRegistro;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 use Maatwebsite\Excel\Concerns\WithTitle;
@@ -490,13 +491,7 @@ class InformeAsistenciaSheet implements FromArray, WithTitle, \Maatwebsite\Excel
 
             $items = DB::table('registros_checkin as rc')
                 ->leftJoin('evento_personas as ep', 'ep.id', '=', 'rc.persona_id')
-                ->leftJoin('controles as c', function ($join) {
-                    $join->on('c.evento_id', '=', 'rc.evento_id')
-                        ->where(function ($q) {
-                            $q->whereColumn('c.id', 'rc.control_id')
-                                ->orWhereColumn('c.numero', 'rc.control_numero_snapshot');
-                        });
-                })
+                ->leftJoinSub(ControlesPorRegistro::delEvento($this->eventoId), 'c', 'c.registro_id', '=', 'rc.id')
                 ->where('rc.evento_id', $this->eventoId)
                 ->whereNotNull('rc.persona_id')
                 ->whereIn('rc.estado', ['CHECKED_IN', 'RETIRADO'])
@@ -550,13 +545,7 @@ class InformeAsistenciaSheet implements FromArray, WithTitle, \Maatwebsite\Excel
                 $join->on('rc.id', '=', 'u.last_id');
             })
             ->leftJoin('evento_padron as ep', 'ep.id', '=', 'rc.inmueble_base_id')
-            ->leftJoin('controles as c', function ($join) {
-                $join->on('c.evento_id', '=', 'rc.evento_id')
-                    ->where(function ($q) {
-                        $q->whereColumn('c.id', 'rc.control_id')
-                            ->orWhereColumn('c.numero', 'rc.control_numero_snapshot');
-                    });
-            })
+            ->leftJoinSub(ControlesPorRegistro::delEvento($this->eventoId), 'c', 'c.registro_id', '=', 'rc.id')
             ->where('rc.evento_id', $this->eventoId)
             ->whereIn('rc.estado', ['CHECKED_IN', 'RETIRADO'])
             ->orderBy('rc.control_numero_snapshot')
